@@ -3,7 +3,7 @@ import mediapipe as mp
 import time
 
 # Укажи путь к видео, которое хочешь проверить
-VIDEO_PATH = "../my_office_dance.mp4"
+VIDEO_PATH = "../test_dance.mp4"
 
 
 def view_tracking():
