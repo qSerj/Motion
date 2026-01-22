@@ -2,144 +2,177 @@ import cv2
 import json
 import time
 import numpy as np
-from core.pose_engine import PoseEngine
-from core.geometry import calculate_angle_3d, calculate_distance
+import zmq  # <--- Добавили
+from backend.core.pose_engine import PoseEngine
+from backend.core.geometry import calculate_angle_3d, calculate_distance
+
+# Пробуем импортировать плеер, если нет - работаем без звука
+try:
+    from ffpyplayer.player import MediaPlayer
+
+    SOUND_AVAILABLE = True
+except ImportError:
+    print("Warning: ffpyplayer not found. Sound disabled.")
+    SOUND_AVAILABLE = False
 
 
 class GameEngine:
-    # ### NEW: Добавили аргумент speed (по умолчанию 1.0 - обычная скорость)
-    def __init__(self, json_path, video_path, tolerance=25, speed=1.0):
+    def __init__(self, json_path, video_path, tolerance=25, speed=1.0, zmq_port=5555):
         self.engine = PoseEngine()
         self.tolerance = tolerance
         self.video_path = video_path
-        self.speed = speed  # Сохраняем скорость
+        self.speed = speed
+
+        # --- ZMQ Setup ---
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.PUB)
+        address = f"tcp://127.0.0.1:{zmq_port}"
+        self.socket.bind(address)
+        print(f"[GameEngine] Broadcasting on {address}")
+        # -----------------
 
         with open(json_path, 'r') as f:
             self.pattern = json.load(f)
 
         self.pattern_map = {f"{d['timestamp']:.1f}": d['angles'] for d in self.pattern}
         self.score = 0
+        self.audio_player = None
 
     def run(self):
         cap_ref = cv2.VideoCapture(self.video_path)
         cap_user = cv2.VideoCapture(0)
 
-        # Получаем исходный FPS видео (обычно 30 или 60)
         video_fps = cap_ref.get(cv2.CAP_PROP_FPS)
-        if video_fps == 0: video_fps = 30  # Защита, если FPS не прочитался
+        if video_fps == 0: video_fps = 30
 
-        # ### NEW: Вычисляем задержку между кадрами
-        # Формула: (1000 мс / FPS) / скорость
-        # Если скорость 0.5, задержка увеличится в 2 раза -> видео замедлится
-        frame_delay = int(1000 / (video_fps * self.speed))
+        # Задержка нам теперь нужна только для синхронизации времени,
+        # так как waitKey больше нет.
+        target_delay = 1.0 / (video_fps * self.speed)
+
+        if SOUND_AVAILABLE and self.speed == 1.0:
+            self.audio_player = MediaPlayer(self.video_path)
 
         ref_w = int(cap_ref.get(cv2.CAP_PROP_FRAME_WIDTH))
         ref_h = int(cap_ref.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        print(f"Game Started at {self.speed}x speed! Press 'q' to exit.")
+        print(f"Game Started! Speed: {self.speed}x")
 
-        while True:
-            ret_ref, frame_ref = cap_ref.read()
-            ret_user, frame_user = cap_user.read()
+        try:
+            while True:
+                start_time = time.time()
 
-            if not ret_ref:
-                print(f"Game Over! Final Score: {self.score}")
-                break
-            if not ret_user:
-                break
+                ret_ref, frame_ref = cap_ref.read()
+                ret_user, frame_user = cap_user.read()
 
-            # Обработка кадров (Зеркало + Ресайз)
-            frame_user = cv2.flip(frame_user, 1)
-            h_user, w_user = frame_user.shape[:2]
-            scale = ref_h / h_user
-            new_w = int(w_user * scale)
-            frame_user = cv2.resize(frame_user, (new_w, ref_h))
+                if not ret_ref:
+                    print("Video finished.")
+                    break
+                if not ret_user:
+                    print("Webcam error.")
+                    break
 
-            # Логика времени
-            current_time_sec = cap_ref.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
-            time_key = f"{current_time_sec:.1f}"
+                # Аудио
+                if self.audio_player:
+                    _, val = self.audio_player.get_frame()
+                    if val == 'eof': break
 
-            target_angles = self.pattern_map.get(time_key)
-            results = self.engine.process_frame(frame_user)
-            lms = self.engine.get_3d_landmarks(results)
+                # --- Обработка кадров ---
+                frame_user = cv2.flip(frame_user, 1)
+                h_user, w_user = frame_user.shape[:2]
+                scale = ref_h / h_user
+                new_w = int(w_user * scale)
+                frame_user = cv2.resize(frame_user, (new_w, ref_h))
 
-            status_color = (200, 200, 200)
-            status_text = "Watch..."
+                # Логика времени
+                current_time_sec = cap_ref.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+                time_key = f"{current_time_sec:.1f}"
 
-            if lms:
-                idx = self.engine.JOINTS
-                nose_pos = lms.get(0)
-                left_wrist = lms[idx['LEFT_WRIST']]
-                right_wrist = lms[idx['RIGHT_WRIST']]
+                target_angles = self.pattern_map.get(time_key)
+                results = self.engine.process_frame(frame_user)
+                lms = self.engine.get_3d_landmarks(results)
 
-                if nose_pos:
-                    dist_l = calculate_distance(left_wrist, nose_pos)
-                    dist_r = calculate_distance(right_wrist, nose_pos)
-                    threshold = 0.15
+                status_color = (200, 200, 200)
+                status_text = "Watch..."
 
-                    # ИСПРАВЛЕНИЕ: Рисуем на frame_user, а не на combined_window
-                    if dist_l < threshold:
-                        cv2.putText(frame_user, "LEFT TOUCH NOSE!", (50, 200),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                # --- Логика Сравнения (Core Logic) ---
+                if target_angles and lms:
+                    idx = self.engine.JOINTS
+                    try:
+                        p_elbow_l = calculate_angle_3d(lms[idx['LEFT_SHOULDER']], lms[idx['LEFT_ELBOW']],
+                                                       lms[idx['LEFT_WRIST']])
+                        p_elbow_r = calculate_angle_3d(lms[idx['RIGHT_SHOULDER']], lms[idx['RIGHT_ELBOW']],
+                                                       lms[idx['RIGHT_WRIST']])
 
-                    if dist_r < threshold:
-                        cv2.putText(frame_user, "RIGHT TOUCH NOSE!", (50, 250),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        t_elbow_l = target_angles.get('left_elbow', 0)
+                        t_elbow_r = target_angles.get('right_elbow', 0)
 
-            if target_angles and lms:
-                idx = self.engine.JOINTS
-                try:
-                    p_elbow_l = calculate_angle_3d(lms[idx['LEFT_SHOULDER']], lms[idx['LEFT_ELBOW']],
-                                                   lms[idx['LEFT_WRIST']])
-                    p_elbow_r = calculate_angle_3d(lms[idx['RIGHT_SHOULDER']], lms[idx['RIGHT_ELBOW']],
-                                                   lms[idx['RIGHT_WRIST']])
+                        diff_l = abs(p_elbow_l - t_elbow_l)
+                        diff_r = abs(p_elbow_r - t_elbow_r)
 
-                    t_elbow_l = target_angles.get('left_elbow', 0)
-                    t_elbow_r = target_angles.get('right_elbow', 0)
+                        if diff_l < self.tolerance and diff_r < self.tolerance:
+                            status_color = (0, 255, 0)
+                            status_text = "PERFECT!"
+                            self.score += 10
+                        elif diff_l < self.tolerance * 1.5 and diff_r < self.tolerance * 1.5:
+                            status_color = (0, 255, 255)
+                            status_text = "GOOD"
+                            self.score += 2
+                        else:
+                            status_color = (0, 0, 255)
+                            status_text = "MISS"
+                    except Exception:
+                        pass
 
-                    diff_l = abs(p_elbow_l - t_elbow_l)
-                    diff_r = abs(p_elbow_r - t_elbow_r)
+                # Отрисовка скелета (MP Draw)
+                if results.pose_landmarks:
+                    self.engine.mp_draw.draw_landmarks(
+                        frame_user, results.pose_landmarks, self.engine.mp_pose.POSE_CONNECTIONS,
+                        self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2),
+                        self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2)
+                    )
 
-                    if diff_l < self.tolerance and diff_r < self.tolerance:
-                        status_color = (0, 255, 0)
-                        status_text = "PERFECT!"
-                        self.score += 10
-                    elif diff_l < self.tolerance * 1.5 and diff_r < self.tolerance * 1.5:
-                        status_color = (0, 255, 255)
-                        status_text = "GOOD"
-                        self.score += 2
-                    else:
-                        status_color = (0, 0, 255)
-                        status_text = "MISS"
-                except Exception:
-                    pass
+                # Склейка кадров (Референс + Юзер)
+                # Пока оставляем склейку в Python, чтобы C# просто показывал картинку
+                combined_window = np.hstack((frame_ref, frame_user))
 
-            if results.pose_landmarks:
-                self.engine.mp_draw.draw_landmarks(
-                    frame_user, results.pose_landmarks, self.engine.mp_pose.POSE_CONNECTIONS,
-                    self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2),
-                    self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2)
-                )
+                # Рисуем UI прямо на картинке (временно, пока не перенесли UI в C#)
+                cv2.rectangle(combined_window, (10, 10), (350, 120), (0, 0, 0), -1)
+                cv2.putText(combined_window, f"Score: {self.score}", (30, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+                cv2.putText(combined_window, status_text, (30, 100),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, status_color, 3)
 
-            combined_window = np.hstack((frame_ref, frame_user))
+                # --- ОТПРАВКА В C# (IPC) ---
+                # 1. Сжимаем в JPEG (Quality 70 - баланс скорости и качества)
+                ret, buffer = cv2.imencode('.jpg', combined_window, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
 
-            # UI
-            cv2.rectangle(combined_window, (10, 10), (300, 100), (0, 0, 0), -1)
-            cv2.putText(combined_window, f"Score: {self.score}", (30, 50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-            cv2.putText(combined_window, status_text, (30, 90),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 2)
+                # 2. Формируем метаданные (на будущее для UI)
+                meta = {
+                    "score": self.score,
+                    "status": status_text,
+                    "time": current_time_sec
+                }
 
-            # Отображаем скорость на экране
-            cv2.putText(combined_window, f"Speed: {self.speed}x", (new_w + 10, 50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+                # 3. Шлем в сокет
+                self.socket.send_multipart([
+                    b"video",
+                    json.dumps(meta).encode('utf-8'),
+                    buffer.tobytes()
+                ])
+                # ---------------------------
 
-            cv2.imshow("Dance Trainer", combined_window)
+                # Контроль FPS (чтобы не жарить CPU)
+                process_time = time.time() - start_time
+                sleep_time = target_delay - process_time
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
 
-            # ### NEW: Используем frame_delay вместо жесткой единицы
-            if cv2.waitKey(frame_delay) & 0xFF == ord('q'):
-                break
-
-        cap_ref.release()
-        cap_user.release()
-        cv2.destroyAllWindows()
+        except KeyboardInterrupt:
+            print("Stopping...")
+        finally:
+            cap_ref.release()
+            cap_user.release()
+            if self.audio_player:
+                self.audio_player.close_player()
+            self.socket.close()
+            self.context.term()
