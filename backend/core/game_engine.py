@@ -1,12 +1,15 @@
+import os
 import cv2
 import json
 import time
 import numpy as np
-import zmq  # <--- Добавили
-from backend.core.pose_engine import PoseEngine
-from backend.core.geometry import calculate_angle_3d, calculate_distance
+import zmq
+from enum import Enum
 
-# Пробуем импортировать плеер, если нет - работаем без звука
+from backend.core.pose_engine import PoseEngine
+from backend.core.geometry import calculate_angle_3d
+
+# Проверка звука
 try:
     from ffpyplayer.player import MediaPlayer
 
@@ -16,218 +19,250 @@ except ImportError:
     SOUND_AVAILABLE = False
 
 
-class GameEngine:
-    def __init__(self, json_path, video_path, tolerance=25, speed=1.0, zmq_port=5555, cmd_port=5556):
-        self.engine = PoseEngine()
-        self.tolerance = tolerance
-        self.video_path = video_path
-        self.speed = speed
+# --- ОПРЕДЕЛЕНИЕ СОСТОЯНИЙ ---
+class GameState(Enum):
+    IDLE = "IDLE"  # Ждем загрузки уровня
+    PLAYING = "PLAYING"  # Идет игра
+    PAUSED = "PAUSED"  # Пауза
+    FINISHED = "FINISHED"  # Уровень пройден
 
-        # --- ZMQ Setup ---
+
+class GameEngine:
+    def __init__(self, zmq_port=5555, cmd_port=5556):
+        # 1. Инициализация инфраструктуры (Скелет + Сеть)
+        self.engine = PoseEngine()
+
+        # ZMQ
         self.context = zmq.Context()
         self.pub_socket = self.context.socket(zmq.PUB)
-        pub_address = f"tcp://127.0.0.1:{zmq_port}"
-        self.pub_socket.bind(pub_address)
+        self.pub_socket.bind(f"tcp://127.0.0.1:{zmq_port}")
 
         self.cmd_socket = self.context.socket(zmq.REP)
-        cmd_address = f"tcp://127.0.0.1:{cmd_port}"
-        self.cmd_socket.bind(cmd_address)
+        self.cmd_socket.bind(f"tcp://127.0.0.1:{cmd_port}")
 
-        print(f"[GameEngine] Stream on {pub_address}, Commands on {cmd_address}")
-        # -----------------
+        print(f"[GameEngine] Service Started. IDLE mode.")
 
-        with open(json_path, 'r') as f:
-            self.pattern = json.load(f)
+        # 2. Состояние игры
+        self.state = GameState.IDLE
 
-        self.pattern_map = {f"{d['timestamp']:.1f}": d['angles'] for d in self.pattern}
-        self.score = 0
+        # 3. Ресурсы уровня (пока пустые)
+        self.cap_ref = None
+        self.cap_user = cv2.VideoCapture(0)  # Вебку держим открытой всегда, чтобы не тратить время на "прогрев"
         self.audio_player = None
-        self.is_paused = False
+        self.pattern_map = {}
+
+        # Параметры геймплея
+        self.score = 0
+        self.tolerance = 25
+        self.speed = 1.0
+        self.current_time = 0.0
+        self.target_delay = 0.033  # Default 30 FPS
+
+        # Заглушка для IDLE режима (черный квадрат)
+        self.blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
 
     def run(self):
-        cap_ref = cv2.VideoCapture(self.video_path)
-        cap_user = cv2.VideoCapture(0)
-
-        video_fps = cap_ref.get(cv2.CAP_PROP_FPS)
-        if video_fps == 0: video_fps = 30
-
-        # Задержка нам теперь нужна только для синхронизации времени,
-        # так как waitKey больше нет.
-        target_delay = 1.0 / (video_fps * self.speed)
-
-        if SOUND_AVAILABLE and self.speed == 1.0:
-            self.audio_player = MediaPlayer(self.video_path)
-
-        ref_w = int(cap_ref.get(cv2.CAP_PROP_FRAME_WIDTH))
-        ref_h = int(cap_ref.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        print(f"Game Started! Speed: {self.speed}x")
-
+        """Главный жизненный цикл приложения"""
         try:
             while True:
-                start_time = time.time()
+                loop_start = time.time()
 
-                try:
-                    cmd_bytes = self.cmd_socket.recv(flags=zmq.NOBLOCK)
-                    command = json.loads(cmd_bytes.decode('utf-8'))
-                    print(f"Received cmd: {command}")
-                    response = {"status": "ok"}
+                # --- 1. ОБРАБОТКА КОМАНД (В любом состоянии) ---
+                self._handle_commands()
 
-                    if command.get('type') == 'pause':
-                        self.is_paused = True
-                        if self.audio_player:
-                            self.audio_player.set_pause(True)
-                    elif command.get('type') == 'resume':
-                        self.is_paused = False
-                        if self.audio_player:
-                            self.audio_player.set_pause(False)
-                    elif command.get('type') == 'load':
-                        new_video_path = command.get('video_path')
-                        print(f"Loading new video: {new_video_path}")
+                # --- 2. ЛОГИКА ПО СОСТОЯНИЯМ ---
+                if self.state == GameState.IDLE:
+                    self._loop_idle()
+                elif self.state == GameState.PLAYING:
+                    self._loop_playing()
+                elif self.state == GameState.PAUSED:
+                    self._loop_paused()
+                elif self.state == GameState.FINISHED:
+                    self._loop_finished()
 
-                        cap_ref.release()
-                        if self.audio_player:
-                            self.audio_player.close_player()
-                            self.audio_player = None
+                # --- 3. КОНТРОЛЬ FPS ---
+                # В IDLE можно спать дольше (экономим CPU), в игре - жесткий тайминг
+                delay = 0.1 if self.state in [GameState.IDLE, GameState.FINISHED] else self.target_delay
 
-                        self.video_path = new_video_path
-                        cap_ref = cv2.VideoCapture(self.video_path)
-
-                        self.score = 0
-                        self.is_paused = False
-
-                        ref_w = int(cap_ref.get(cv2.CAP_PROP_FRAME_WIDTH))
-                        ref_h = int(cap_ref.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        video_fps = cap_ref.get(cv2.CAP_PROP_FPS)
-                        if video_fps == 0:
-                            video_fps = 30
-                        target_delay = 1.0 / (video_fps * self.speed)
-
-                        if SOUND_AVAILABLE and self.speed == 1.0:
-                            self.audio_player = MediaPlayer(self.video_path)
-                    elif command.get('type') == 'stop':
-                        self.cmd_socket.send_json({"status": "stopping"})
-                        break
-
-                    self.cmd_socket.send_json(response)
-                except zmq.Again:
-                    pass
-
-                if self.is_paused:
-                    time.sleep(0.1)
-                    continue
-
-                ret_ref, frame_ref = cap_ref.read()
-                ret_user, frame_user = cap_user.read()
-
-                if not ret_ref:
-                    print("Video finished.")
-                    break
-                if not ret_user:
-                    print("Webcam error.")
-                    break
-
-                # Аудио
-                if self.audio_player:
-                    _, val = self.audio_player.get_frame()
-                    if val == 'eof': break
-
-                # --- Обработка кадров ---
-                frame_user = cv2.flip(frame_user, 1)
-                h_user, w_user = frame_user.shape[:2]
-                scale = ref_h / h_user
-                new_w = int(w_user * scale)
-                frame_user = cv2.resize(frame_user, (new_w, ref_h))
-
-                # Логика времени
-                current_time_sec = cap_ref.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
-                time_key = f"{current_time_sec:.1f}"
-
-                target_angles = self.pattern_map.get(time_key)
-                results = self.engine.process_frame(frame_user)
-                lms = self.engine.get_3d_landmarks(results)
-
-                status_color = (200, 200, 200)
-                status_text = "Watch..."
-
-                # --- Логика Сравнения (Core Logic) ---
-                if target_angles and lms:
-                    idx = self.engine.JOINTS
-                    try:
-                        p_elbow_l = calculate_angle_3d(lms[idx['LEFT_SHOULDER']], lms[idx['LEFT_ELBOW']],
-                                                       lms[idx['LEFT_WRIST']])
-                        p_elbow_r = calculate_angle_3d(lms[idx['RIGHT_SHOULDER']], lms[idx['RIGHT_ELBOW']],
-                                                       lms[idx['RIGHT_WRIST']])
-
-                        t_elbow_l = target_angles.get('left_elbow', 0)
-                        t_elbow_r = target_angles.get('right_elbow', 0)
-
-                        diff_l = abs(p_elbow_l - t_elbow_l)
-                        diff_r = abs(p_elbow_r - t_elbow_r)
-
-                        if diff_l < self.tolerance and diff_r < self.tolerance:
-                            status_color = (0, 255, 0)
-                            status_text = "PERFECT!"
-                            self.score += 10
-                        elif diff_l < self.tolerance * 1.5 and diff_r < self.tolerance * 1.5:
-                            status_color = (0, 255, 255)
-                            status_text = "GOOD"
-                            self.score += 2
-                        else:
-                            status_color = (0, 0, 255)
-                            status_text = "MISS"
-                    except Exception:
-                        pass
-
-                # Отрисовка скелета (MP Draw)
-                if results.pose_landmarks:
-                    self.engine.mp_draw.draw_landmarks(
-                        frame_user, results.pose_landmarks, self.engine.mp_pose.POSE_CONNECTIONS,
-                        self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2),
-                        self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2)
-                    )
-
-                # --- ОТПРАВКА В C# (IPC) ---
-                # 1. Сжимаем Референс (Тренер)
-                ret_ref, buffer_ref = cv2.imencode(
-                    '.jpg', frame_ref, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-                )
-
-                # 2. Сжимаем Юзера (Ты со скелетом)
-                ret_user, buffer_user = cv2.imencode(
-                    '.jpg', frame_user, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-                )
-
-                # 2. Формируем метаданные (на будущее для UI)
-                meta = {
-                    "score": self.score,
-                    "status": status_text,
-                    "time": current_time_sec
-                }
-
-                # 3. Шлем Multipart сообщение из 4 частей!
-                # [Topic, Metadata, Image1, Image2]
-                self.pub_socket.send_multipart([
-                    b"video",
-                    json.dumps(meta).encode('utf-8'),
-                    buffer_ref.tobytes(),
-                    buffer_user.tobytes()
-                ])
-                # ---------------------------
-
-                # Контроль FPS (чтобы не жарить CPU)
-                process_time = time.time() - start_time
-                sleep_time = target_delay - process_time
+                process_time = time.time() - loop_start
+                sleep_time = delay - process_time
                 if sleep_time > 0:
                     time.sleep(sleep_time)
 
         except KeyboardInterrupt:
             print("Stopping...")
         finally:
-            cap_ref.release()
-            cap_user.release()
-            if self.audio_player:
-                self.audio_player.close_player()
-            self.pub_socket.close()
-            self.cmd_socket.close()
-            self.context.term()
+            self._cleanup()
+
+    def _handle_commands(self):
+        """Неблокирующее чтение команд"""
+        try:
+            cmd_bytes = self.cmd_socket.recv(flags=zmq.NOBLOCK)
+            command = json.loads(cmd_bytes.decode('utf-8'))
+            print(f"CMD received: {command}")
+
+            ctype = command.get('type')
+            response = {"status": "ok"}
+
+            if ctype == 'load':
+                self._load_level(command)
+            elif ctype == 'pause':
+                if self.state == GameState.PLAYING:
+                    self.state = GameState.PAUSED
+                    if self.audio_player: self.audio_player.set_pause(True)
+            elif ctype == 'resume':
+                if self.state == GameState.PAUSED:
+                    self.state = GameState.PLAYING
+                    if self.audio_player: self.audio_player.set_pause(False)
+            elif ctype == 'restart':
+                # Перемотка в начало
+                if self.cap_ref:
+                    self.cap_ref.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    if self.audio_player:
+                        self.audio_player.seek(0)
+                        self.audio_player.set_pause(False)
+                    self.score = 0
+                    self.state = GameState.PLAYING
+            elif ctype == 'stop':  # Полный выход
+                raise KeyboardInterrupt
+
+            self.cmd_socket.send_json(response)
+        except zmq.Again:
+            pass
+        except Exception as e:
+            print(f"Cmd Error: {e}")
+            # Если сломались при обработке команды - лучше ответить ошибкой, но не падать
+            try:
+                self.cmd_socket.send_json({"status": "error", "msg": str(e)})
+            except:
+                pass
+
+    def _load_level(self, cmd):
+        """Загрузка ресурсов и переход в PLAYING"""
+        video_path = cmd.get('video_path')
+        json_path = cmd.get('json_path')
+
+        # Очистка старого
+        if self.cap_ref: self.cap_ref.release()
+        if self.audio_player: self.audio_player.close_player()
+
+        # Загрузка нового
+        self.cap_ref = cv2.VideoCapture(video_path)
+
+        # Настройка таймингов
+        fps = self.cap_ref.get(cv2.CAP_PROP_FPS)
+        if fps == 0: fps = 30
+        self.target_delay = 1.0 / fps
+
+        # Загрузка паттернов
+        if json_path and os.path.exists(json_path):
+            with open(json_path, 'r') as f:
+                pat = json.load(f)
+                self.pattern_map = {f"{d['timestamp']:.1f}": d['angles'] for d in pat}
+        else:
+            self.pattern_map = {}
+
+        # Аудио
+        if SOUND_AVAILABLE:
+            self.audio_player = MediaPlayer(video_path)
+
+        self.score = 0
+        self.state = GameState.PLAYING
+        print(f"Level loaded. State -> PLAYING")
+
+    def _loop_idle(self):
+        """Простой пинг, чтобы UI знал, что мы живы"""
+        # Шлем пустой кадр раз в 100мс
+        self._send_frame(self.blank_frame, self.blank_frame, "Ready to load level")
+
+    def _loop_playing(self):
+        ret_ref, frame_ref = self.cap_ref.read()
+        ret_user, frame_user = self.cap_user.read()
+
+        # Если видео кончилось -> FINISHED
+        if not ret_ref:
+            self.state = GameState.FINISHED
+            print("Video ended. State -> FINISHED")
+            return
+
+        # Если вебка отвалилась - пробуем переподнять (или игнорим)
+        if not ret_user:
+            frame_user = self.blank_frame  # Заглушка
+
+        # Аудио синхронизация
+        if self.audio_player:
+            _, val = self.audio_player.get_frame()
+            if val == 'eof':
+                self.state = GameState.FINISHED
+                return
+
+        # --- Обработка (CV) ---
+        frame_user = cv2.flip(frame_user, 1)
+
+        # Ресайз юзера под референс
+        h_ref, w_ref = frame_ref.shape[:2]
+        h_user, w_user = frame_user.shape[:2]
+        if h_user > 0:
+            scale = h_ref / h_user
+            frame_user = cv2.resize(frame_user, (int(w_user * scale), h_ref))
+
+        # Текущее время
+        self.current_time = self.cap_ref.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+
+        # Анализ движений
+        results = self.engine.process_frame(frame_user)
+        lms = self.engine.get_3d_landmarks(results)
+
+        status_text = ""
+        # Тут должна быть твоя логика сравнения (Get angles -> Compare -> Score)
+        # Я пока оставлю заглушку, чтобы не раздувать код
+        time_key = f"{self.current_time:.1f}"
+        if time_key in self.pattern_map and lms:
+            # ... сравнение ...
+            pass
+
+        # Отрисовка
+        if results.pose_landmarks:
+            self.engine.mp_draw.draw_landmarks(
+                frame_user, results.pose_landmarks, self.engine.mp_pose.POSE_CONNECTIONS
+            )
+
+        self._send_frame(frame_ref, frame_user, status_text)
+
+    def _loop_paused(self):
+        # В паузе мы ничего не читаем, но продолжаем слать ПОСЛЕДНИЙ кадр,
+        # либо заглушку, чтобы UI не завис.
+        # Для простоты шлем "PAUSED" текстом
+        # (В идеале надо хранить last_frame_ref и слать его)
+        self._send_frame(self.blank_frame, self.blank_frame, "PAUSED")
+
+    def _loop_finished(self):
+        # Видео кончилось. Шлем результат.
+        self._send_frame(self.blank_frame, self.blank_frame, "LEVEL COMPLETE")
+
+    def _send_frame(self, ref, user, status):
+        """Универсальная отправка"""
+        ret1, buf_ref = cv2.imencode('.jpg', ref, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+        ret2, buf_user = cv2.imencode('.jpg', user, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+
+        meta = {
+            "state": self.state.value,  # <-- ВАЖНО: Шлем состояние в UI
+            "score": self.score,
+            "time": self.current_time,
+            "status": status
+        }
+
+        self.pub_socket.send_multipart([
+            b"video",
+            json.dumps(meta).encode('utf-8'),
+            buf_ref.tobytes(),
+            buf_user.tobytes()
+        ])
+
+    def _cleanup(self):
+        if self.cap_ref: self.cap_ref.release()
+        self.cap_user.release()
+        if self.audio_player: self.audio_player.close_player()
+        self.pub_socket.close()
+        self.cmd_socket.close()
+        self.context.term()

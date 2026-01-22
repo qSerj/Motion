@@ -31,5 +31,8 @@ namespace Motion.Desktop.Models.Mtp
 
         [JsonPropertyName("target_video")]
         public string TargetVideo { get; set; } = "assets/video.mp4";
+        
+        [JsonPropertyName("patterns_file")]
+        public string PatternsFile { get; set; } = "data/patterns.json"; // Значение по умолчанию
     }
 }

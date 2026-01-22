@@ -25,7 +25,8 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private string _gameStatus = "Waiting...";
         [ObservableProperty] private IBrush _statusColor = Brushes.White;
         [ObservableProperty] private string _buttonText = "PAUSE";
-
+        [ObservableProperty] private string _currentState = "IDLE";
+        
         private readonly MtpFileService _mtpService = new MtpFileService();
 
         public MainWindowViewModel()
@@ -72,25 +73,34 @@ namespace Motion.Desktop.ViewModels
         {
             try
             {
-                StatusText = "Extracting...";
+                StatusText = "Reading Manifest...";
                 IsWaiting = true;
 
-                string videoTempPath = await _mtpService.ExtractVideoToTempAsync(mtpFilePath);
-
                 var manifest = await _mtpService.ReadManifestAsync(mtpFilePath);
-                if (manifest != null)
-                {
-                    StatusText = $"Loading: {manifest.Title}";
-                }
+                if (manifest == null) throw new Exception("Invalid Manifest");
 
-                var cmd = new
-                {
-                    type = "load",
-                    video_path = videoTempPath
+                StatusText = $"Extracting: {manifest.Title}";
+
+                // 1. Извлекаем Видео
+                string videoPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.TargetVideo);
+                
+                // 2. Извлекаем Данные (JSON с углами)
+                string patternsPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.PatternsFile);
+
+                if (string.IsNullOrEmpty(videoPath)) throw new Exception("Video not found in package");
+                // Если patternsPath пустой, можно играть просто как видеоплеер, но лучше предупредить
+
+                // 3. Шлем команду (теперь с двумя путями)
+                var cmd = new 
+                { 
+                    type = "load", 
+                    video_path = videoPath,
+                    json_path = patternsPath // <--- Новое поле
                 };
-
+                
                 SendCommand(cmd);
 
+                // Сброс UI
                 Score = 0;
                 GameStatus = "";
                 IsWaiting = false;
@@ -149,8 +159,14 @@ namespace Motion.Desktop.ViewModels
                             if (IsWaiting) IsWaiting = false; // Скрываем текст
                             if (data != null)
                             {
+                                CurrentState = data.State;
                                 Score =  data.Score;
                                 GameStatus = data.Status;
+
+                                if (CurrentState == "FINISHED")
+                                {
+                                    GameStatus = "LEVEL DONE!";
+                                }
 
                                 StatusColor = data.Status switch
                                 {

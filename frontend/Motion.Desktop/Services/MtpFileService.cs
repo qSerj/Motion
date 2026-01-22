@@ -24,34 +24,6 @@ namespace Motion.Desktop.Services
             return await JsonSerializer.DeserializeAsync<MtpManifest>(stream);
         }
 
-        // Извлечение видео во временный файл (Python не умеет читать видео из ZIP напрямую)
-        // Это компромисс: видео придется распаковать во временную папку.
-        public async Task<string> ExtractVideoToTempAsync(string mtpPath)
-        {
-            using ZipArchive archive = ZipFile.OpenRead(mtpPath);
-
-            // 1. Читаем манифест, чтобы узнать имя файла
-            var manifestEntry = archive.GetEntry("manifest.json");
-            if (manifestEntry == null) throw new Exception("Manifest not found");
-
-            var manifest = await JsonSerializer.DeserializeAsync<MtpManifest>(manifestEntry.Open());
-            var videoPathInZip = manifest?.TargetVideo;
-
-            if (string.IsNullOrEmpty(videoPathInZip)) throw new Exception("Video path not specified in manifest");
-
-            var videoEntry = archive.GetEntry(videoPathInZip);
-            if (videoEntry == null) throw new Exception($"Video file '{videoPathInZip}' not found in package");
-
-            // 2. Создаем временный файл
-            string tempFile = Path.Combine(Path.GetTempPath(), "MotionTrainer", Guid.NewGuid() + ".mp4");
-            Directory.CreateDirectory(Path.GetDirectoryName(tempFile)!);
-
-            // 3. Распаковываем
-            videoEntry.ExtractToFile(tempFile, overwrite: true);
-
-            return tempFile; // Возвращаем путь, который отдадим Питону
-        }
-
         // Создание нового пакета (для Редактора)
         public void CreatePackage(string outputPath, MtpManifest manifest, string sourceVideoPath)
         {
@@ -73,6 +45,27 @@ namespace Motion.Desktop.Services
             archive.CreateEntryFromFile(sourceVideoPath, manifest.TargetVideo);
 
             // В будущем здесь будем добавлять patterns.json и прочее
+        }
+        
+        // Универсальный метод извлечения файла из ZIP во временную папку
+        public async Task<string> ExtractAssetToTempAsync(string mtpPath, string assetPathInZip)
+        {
+            if (string.IsNullOrEmpty(assetPathInZip)) return null;
+
+            using ZipArchive archive = ZipFile.OpenRead(mtpPath);
+            var entry = archive.GetEntry(assetPathInZip);
+            
+            if (entry == null) return null; // Или кинуть ошибку, если файл критичен
+
+            // Генерируем уникальное имя, чтобы не было конфликтов
+            // Сохраняем расширение файла (.json, .mp4)
+            string ext = Path.GetExtension(assetPathInZip);
+            string tempFile = Path.Combine(Path.GetTempPath(), "MotionTrainer", Guid.NewGuid() + ext);
+            
+            Directory.CreateDirectory(Path.GetDirectoryName(tempFile)!);
+            entry.ExtractToFile(tempFile, overwrite: true);
+
+            return tempFile;
         }
     }
 }
