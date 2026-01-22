@@ -14,7 +14,8 @@ namespace Motion.Desktop.ViewModels
 {
     public partial class MainWindowViewModel : ViewModelBase
     {
-        [ObservableProperty] private Bitmap? _currentFrame;
+        [ObservableProperty] private Bitmap? _referenceFrame;
+        [ObservableProperty] private Bitmap? _userFrame;
         [ObservableProperty] private string _statusText = "Waiting for Python stream...";
         [ObservableProperty] private bool _isWaiting = true;
         
@@ -43,44 +44,49 @@ namespace Motion.Desktop.ViewModels
                 {
                     try
                     {
-                        // Читаем Multipart сообщение из 3 частей:
+                        // Читаем Multipart сообщение из 4 частей:
                         // 1. Topic (Тема)
                         string topic = sub.ReceiveFrameString();
                         
                         // 2. Metadata (JSON с инфой)
                         string metadata = sub.ReceiveFrameString();
                         
-                        // 3. Image Data (Байты картинки)
-                        byte[] bytes = sub.ReceiveFrameBytes();
+                        // 3. Reference Image Data (Байты картинки)
+                        byte[] bytesRef = sub.ReceiveFrameBytes();
+
+                        // 4. User Image Data (Байты картинки)
+                        byte[] bytesUser = sub.ReceiveFrameBytes();
 
                         var data = JsonSerializer.Deserialize<GameData>(metadata);
 
                         // Создаем Bitmap из байтов (в памяти)
-                        using (var stream = new MemoryStream(bytes))
+                        using var streamRef = new MemoryStream(bytesRef);
+                        using var streamUser = new MemoryStream(bytesUser);
+
+                        var bitmapRef = new Bitmap(streamRef);
+                        var bitmapUser = new Bitmap(streamUser);
+
+                        // ВАЖНО: Обновлять UI можно только из Главного потока!
+                        // Используем Dispatcher
+                        Dispatcher.UIThread.Post(() =>
                         {
-                            var bitmap = new Bitmap(stream);
-
-                            // ВАЖНО: Обновлять UI можно только из Главного потока!
-                            // Используем Dispatcher
-                            Dispatcher.UIThread.Post(() =>
+                            ReferenceFrame = bitmapRef;
+                            UserFrame = bitmapUser;
+                            if (IsWaiting) IsWaiting = false; // Скрываем текст
+                            if (data != null)
                             {
-                                CurrentFrame = bitmap;
-                                if (IsWaiting) IsWaiting = false; // Скрываем текст
-                                if (data != null)
-                                {
-                                    Score =  data.Score;
-                                    GameStatus = data.Status;
+                                Score =  data.Score;
+                                GameStatus = data.Status;
 
-                                    StatusColor = data.Status switch
-                                    {
-                                        "PERFECT!" => Brushes.LimeGreen,
-                                        "GOOD" => Brushes.Yellow,
-                                        "MISS" => Brushes.Red,
-                                        _ => Brushes.White
-                                    };
-                                }
-                            });
-                        }
+                                StatusColor = data.Status switch
+                                {
+                                    "PERFECT!" => Brushes.LimeGreen,
+                                    "GOOD" => Brushes.Yellow,
+                                    "MISS" => Brushes.Red,
+                                    _ => Brushes.White
+                                };
+                            }
+                        });
                     }
                     catch (Exception ex)
                     {
