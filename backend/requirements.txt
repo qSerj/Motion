@@ -5,3 +5,5 @@ protobuf==3.20.3
 # Математика и Видео
 opencv-python==4.8.0.76
 numpy==1.26.3
+
+pyzmq

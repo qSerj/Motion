@@ -1,18 +1,21 @@
-# Виртуальное окружение (там тысячи файлов, они не нужны в репо)
+# --- Python ---
+__pycache__/
+*.py[cod]
 .venv/
 venv/
-env/
-
-# Настройки PyCharm
-.idea/
-
-# Кэш питона
-__pycache__/
-*.pyc
-
-# Видеофайлы (они тяжелые, GitHub их не любит)
 *.mp4
 *.avi
+.pytest_cache/
 
-# Локальные данные
-data/output/*.json
+# --- C# / .NET ---
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.pdb
+.idea/
+*.sln.docstates
+
+# --- OS ---
+.DS_Store

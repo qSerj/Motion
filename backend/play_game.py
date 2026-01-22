@@ -1,7 +1,7 @@
 from core.game_engine import GameEngine
 
 # Пути к файлам (проверь названия!)
-VIDEO_FILE = "my_office_dance.mp4"
+VIDEO_FILE = "../my_office_dance.mp4"
 JSON_FILE = "data/output/dance_pattern.json"
 
 if __name__ == "__main__":

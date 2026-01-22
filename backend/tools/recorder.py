@@ -3,7 +3,7 @@ import time
 import os
 
 # Настройки
-OUTPUT_FILE = "../my_office_dance.mp4"
+OUTPUT_FILE = "../../my_office_dance.mp4"
 DURATION = 10  # секунд
 FPS = 30.0
 
