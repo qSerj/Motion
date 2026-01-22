@@ -131,13 +131,16 @@ class GameEngine:
                         self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2)
                     )
 
-                # Склейка кадров (Референс + Юзер)
-                # Пока оставляем склейку в Python, чтобы C# просто показывал картинку
-                combined_window = np.hstack((frame_ref, frame_user))
-
                 # --- ОТПРАВКА В C# (IPC) ---
-                # 1. Сжимаем в JPEG (Quality 70 - баланс скорости и качества)
-                ret, buffer = cv2.imencode('.jpg', combined_window, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+                # 1. Сжимаем Референс (Тренер)
+                ret_ref, buffer_ref = cv2.imencode(
+                    '.jpg', frame_ref, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+                )
+
+                # 2. Сжимаем Юзера (Ты со скелетом)
+                ret_user, buffer_user = cv2.imencode(
+                    '.jpg', frame_user, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+                )
 
                 # 2. Формируем метаданные (на будущее для UI)
                 meta = {
@@ -146,11 +149,13 @@ class GameEngine:
                     "time": current_time_sec
                 }
 
-                # 3. Шлем в сокет
+                # 3. Шлем Multipart сообщение из 4 частей!
+                # [Topic, Metadata, Image1, Image2]
                 self.socket.send_multipart([
                     b"video",
                     json.dumps(meta).encode('utf-8'),
-                    buffer.tobytes()
+                    buffer_ref.tobytes(),
+                    buffer_user.tobytes()
                 ])
                 # ---------------------------
 

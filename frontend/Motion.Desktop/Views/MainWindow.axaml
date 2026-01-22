@@ -14,33 +14,45 @@
     </Design.DataContext>
 
     <Panel>
-        <Image Source="{Binding CurrentFrame}" 
-               Stretch="Uniform" />
-
         <TextBlock Text="{Binding StatusText}" 
                    IsVisible="{Binding IsWaiting}"
                    Foreground="White"
                    HorizontalAlignment="Center" 
                    VerticalAlignment="Center"/>
 
-        <Grid ColumnDefinitions="*, *" IsVisible="{Binding !IsWaiting}" Margin="20">
+        <Grid IsVisible="{Binding !IsWaiting}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Image Grid.Column="0" 
+                   Source="{Binding ReferenceFrame}" 
+                   Stretch="Uniform" 
+                   Margin="10"/>
+
+            <GridSplitter Grid.Column="1" 
+                          Background="#333" 
+                          ResizeDirection="Columns"/>
+
+            <Image Grid.Column="2" 
+                   Source="{Binding UserFrame}" 
+                   Stretch="Uniform" 
+                   Margin="10"/>
+        </Grid>
+
+        <Grid ColumnDefinitions="*, 4, *" IsVisible="{Binding !IsWaiting}" Margin="20" IsHitTestVisible="False">
             
             <StackPanel Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left">
                 <TextBlock Text="SCORE" Foreground="Gray" FontWeight="Bold" FontSize="20"/>
                 <TextBlock Text="{Binding Score}" Foreground="White" FontWeight="Bold" FontSize="60"/>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Center">
-                <TextBlock Text="{Binding GameStatus}" 
-                           Foreground="Black" Opacity="0.5"
-                           FontWeight="Black" FontSize="50"
-                           HorizontalAlignment="Center"
-                           Margin="2,2,0,0"/>
-                <TextBlock Text="{Binding GameStatus}" 
-                           Foreground="{Binding StatusColor}" 
-                           FontWeight="Black" FontSize="50"
-                           HorizontalAlignment="Center"
-                           Margin="0,-60,0,0"/>
+            <StackPanel Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding GameStatus}" Foreground="{Binding StatusColor}" 
+                           FontWeight="Black" FontSize="40" 
+                           Effect="drop-shadow(2 2 2 black)"/>
             </StackPanel>
         </Grid>
     </Panel>
