@@ -36,4 +36,53 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private async void CreateLevelButton_Clicked(object sender, RoutedEventArgs e)
+    {
+        var videoFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select Video to Digitize",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Video Files")
+                {
+                    Patterns = ["*.mp4", "*.mov", "*.avi", "*.mkv"]
+                },
+                FilePickerFileTypes.All
+            ]
+        });
+
+        if (videoFiles.Count == 0)
+        {
+            return;
+        }
+
+        var sourcePath = videoFiles[0].Path.LocalPath;
+
+        var savedFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save New Level As...",
+            DefaultExtension = ".mtp",
+            SuggestedFileName = "NewLevel.mtp",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("Motion Package")
+                {
+                    Patterns = ["*.mtp"]
+                }
+            ]
+        });
+
+        if (savedFile == null)
+        {
+            return;
+        }
+
+        var destPath = savedFile.Path.LocalPath;
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await vm.DigitizeVideoAsync(sourcePath, destPath);
+        }
+    }
 }

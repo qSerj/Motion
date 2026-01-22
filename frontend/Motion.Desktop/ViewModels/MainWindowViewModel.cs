@@ -112,6 +112,19 @@ namespace Motion.Desktop.ViewModels
             }
         }
 
+        public async Task DigitizeVideoAsync(string sourceVideoPath, string outputMtpPath)
+        {
+            var cmd = new
+            {
+                type = "digitize",
+                source_path = sourceVideoPath,
+                output_path = outputMtpPath
+            };
+
+            SendCommand(cmd);
+            await Task.CompletedTask;
+        }
+
         private void ReceiveVideoFrames()
         {
             // Создаем Subscriber сокет (как в радиоприемнике)
