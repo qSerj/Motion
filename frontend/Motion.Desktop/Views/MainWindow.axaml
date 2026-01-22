@@ -48,12 +48,19 @@
                 <TextBlock Text="SCORE" Foreground="Gray" FontWeight="Bold" FontSize="20"/>
                 <TextBlock Text="{Binding Score}" Foreground="White" FontWeight="Bold" FontSize="60"/>
 
-                <Button Content="📂 OPEN LEVEL"
-                        Click="OpenFileButton_Clicked"
-                        Background="#222"
-                        Foreground="White"
-                        Margin="0,20,0,0"
-                        IsHitTestVisible="True"/>
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,20,0,0">
+                    <Button Content="📂 OPEN LEVEL"
+                            Click="OpenFileButton_Clicked"
+                            Background="#222"
+                            Foreground="White"
+                            IsHitTestVisible="True"/>
+                    <Button Content="⚡ CREATE LEVEL"
+                            Click="CreateLevelButton_Clicked"
+                            Background="#8A2BE2"
+                            Foreground="White"
+                            IsHitTestVisible="True"
+                            ToolTip.Tip="Turn any video into a level"/>
+                </StackPanel>
             </StackPanel>
 
             <StackPanel Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center">
