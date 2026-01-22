@@ -13,14 +13,36 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Grid>
-        <TextBlock Text="{Binding StatusText}" 
-                   HorizontalAlignment="Center" 
-                   VerticalAlignment="Center"
-                   IsVisible="{Binding IsWaiting}" />
-        
+    <Panel>
         <Image Source="{Binding CurrentFrame}" 
                Stretch="Uniform" />
-    </Grid>
+
+        <TextBlock Text="{Binding StatusText}" 
+                   IsVisible="{Binding IsWaiting}"
+                   Foreground="White"
+                   HorizontalAlignment="Center" 
+                   VerticalAlignment="Center"/>
+
+        <Grid ColumnDefinitions="*, *" IsVisible="{Binding !IsWaiting}" Margin="20">
+            
+            <StackPanel Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left">
+                <TextBlock Text="SCORE" Foreground="Gray" FontWeight="Bold" FontSize="20"/>
+                <TextBlock Text="{Binding Score}" Foreground="White" FontWeight="Bold" FontSize="60"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <TextBlock Text="{Binding GameStatus}" 
+                           Foreground="Black" Opacity="0.5"
+                           FontWeight="Black" FontSize="50"
+                           HorizontalAlignment="Center"
+                           Margin="2,2,0,0"/>
+                <TextBlock Text="{Binding GameStatus}" 
+                           Foreground="{Binding StatusColor}" 
+                           FontWeight="Black" FontSize="50"
+                           HorizontalAlignment="Center"
+                           Margin="0,-60,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Panel>
     
 </Window>

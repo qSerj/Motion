@@ -135,13 +135,6 @@ class GameEngine:
                 # Пока оставляем склейку в Python, чтобы C# просто показывал картинку
                 combined_window = np.hstack((frame_ref, frame_user))
 
-                # Рисуем UI прямо на картинке (временно, пока не перенесли UI в C#)
-                cv2.rectangle(combined_window, (10, 10), (350, 120), (0, 0, 0), -1)
-                cv2.putText(combined_window, f"Score: {self.score}", (30, 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-                cv2.putText(combined_window, status_text, (30, 100),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, status_color, 3)
-
                 # --- ОТПРАВКА В C# (IPC) ---
                 # 1. Сжимаем в JPEG (Quality 70 - баланс скорости и качества)
                 ret, buffer = cv2.imencode('.jpg', combined_window, [int(cv2.IMWRITE_JPEG_QUALITY), 70])

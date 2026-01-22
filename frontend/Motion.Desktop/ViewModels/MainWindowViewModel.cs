@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
-using CommunityToolkit.Mvvm.ComponentModel; // Нужно для обновления UI из другого потока
+using CommunityToolkit.Mvvm.ComponentModel;
+using Motion.Desktop.Models; // Нужно для обновления UI из другого потока
 using NetMQ;
 using NetMQ.Sockets;
 
@@ -11,14 +14,13 @@ namespace Motion.Desktop.ViewModels
 {
     public partial class MainWindowViewModel : ViewModelBase
     {
-        [ObservableProperty]
-        private Bitmap? _currentFrame;
+        [ObservableProperty] private Bitmap? _currentFrame;
+        [ObservableProperty] private string _statusText = "Waiting for Python stream...";
+        [ObservableProperty] private bool _isWaiting = true;
         
-        [ObservableProperty]
-        private string _statusText = "Waiting for Python stream...";
-        
-        [ObservableProperty]
-        private bool _isWaiting = true;
+        [ObservableProperty] private int _score = 0;
+        [ObservableProperty] private string _gameStatus = "Waiting...";
+        [ObservableProperty] private IBrush _statusColor = Brushes.White;
 
         public MainWindowViewModel()
         {
@@ -51,6 +53,8 @@ namespace Motion.Desktop.ViewModels
                         // 3. Image Data (Байты картинки)
                         byte[] bytes = sub.ReceiveFrameBytes();
 
+                        var data = JsonSerializer.Deserialize<GameData>(metadata);
+
                         // Создаем Bitmap из байтов (в памяти)
                         using (var stream = new MemoryStream(bytes))
                         {
@@ -62,6 +66,19 @@ namespace Motion.Desktop.ViewModels
                             {
                                 CurrentFrame = bitmap;
                                 if (IsWaiting) IsWaiting = false; // Скрываем текст
+                                if (data != null)
+                                {
+                                    Score =  data.Score;
+                                    GameStatus = data.Status;
+
+                                    StatusColor = data.Status switch
+                                    {
+                                        "PERFECT!" => Brushes.LimeGreen,
+                                        "GOOD" => Brushes.Yellow,
+                                        "MISS" => Brushes.Red,
+                                        _ => Brushes.White
+                                    };
+                                }
                             });
                         }
                     }
