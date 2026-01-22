@@ -1,10 +1,13 @@
 import cv2
 import json
 import time
+import threading
+from enum import Enum
 import numpy as np
 import zmq  # <--- Добавили
 from backend.core.pose_engine import PoseEngine
 from backend.core.geometry import calculate_angle_3d, calculate_distance
+from backend.core.digitizer import VideoDigitizer
 
 # Пробуем импортировать плеер, если нет - работаем без звука
 try:
@@ -16,12 +19,24 @@ except ImportError:
     SOUND_AVAILABLE = False
 
 
+class GameState(Enum):
+    IDLE = "IDLE"
+    PLAYING = "PLAYING"
+    PAUSED = "PAUSED"
+    FINISHED = "FINISHED"
+    PROCESSING = "PROCESSING"
+
+
 class GameEngine:
     def __init__(self, json_path, video_path, tolerance=25, speed=1.0, zmq_port=5555, cmd_port=5556):
         self.engine = PoseEngine()
         self.tolerance = tolerance
         self.video_path = video_path
         self.speed = speed
+        self.state = GameState.PLAYING
+        self.digitizer = VideoDigitizer()
+        self.processing_progress = 0
+        self.blank_frame = None
 
         # --- ZMQ Setup ---
         self.context = zmq.Context()
@@ -60,6 +75,7 @@ class GameEngine:
 
         ref_w = int(cap_ref.get(cv2.CAP_PROP_FRAME_WIDTH))
         ref_h = int(cap_ref.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.blank_frame = np.zeros((ref_h, ref_w, 3), dtype=np.uint8)
 
         print(f"Game Started! Speed: {self.speed}x")
 
@@ -75,10 +91,12 @@ class GameEngine:
 
                     if command.get('type') == 'pause':
                         self.is_paused = True
+                        self.state = GameState.PAUSED
                         if self.audio_player:
                             self.audio_player.set_pause(True)
                     elif command.get('type') == 'resume':
                         self.is_paused = False
+                        self.state = GameState.PLAYING
                         if self.audio_player:
                             self.audio_player.set_pause(False)
                     elif command.get('type') == 'load':
@@ -95,6 +113,7 @@ class GameEngine:
 
                         self.score = 0
                         self.is_paused = False
+                        self.state = GameState.PLAYING
 
                         ref_w = int(cap_ref.get(cv2.CAP_PROP_FRAME_WIDTH))
                         ref_h = int(cap_ref.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -105,6 +124,14 @@ class GameEngine:
 
                         if SOUND_AVAILABLE and self.speed == 1.0:
                             self.audio_player = MediaPlayer(self.video_path)
+                    elif command.get('type') == 'digitize':
+                        source = command.get('source_path')
+                        target = command.get('output_path')
+                        threading.Thread(
+                            target=self._run_digitization,
+                            args=(source, target),
+                            daemon=True
+                        ).start()
                     elif command.get('type') == 'stop':
                         self.cmd_socket.send_json({"status": "stopping"})
                         break
@@ -112,6 +139,16 @@ class GameEngine:
                     self.cmd_socket.send_json(response)
                 except zmq.Again:
                     pass
+
+                if self.state == GameState.PROCESSING:
+                    self._loop_processing()
+                    time.sleep(0.1)
+                    continue
+
+                if self.state == GameState.IDLE:
+                    self._loop_idle()
+                    time.sleep(0.1)
+                    continue
 
                 if self.is_paused:
                     time.sleep(0.1)
@@ -122,6 +159,7 @@ class GameEngine:
 
                 if not ret_ref:
                     print("Video finished.")
+                    self.state = GameState.FINISHED
                     break
                 if not ret_user:
                     print("Webcam error.")
@@ -187,33 +225,7 @@ class GameEngine:
                         self.engine.mp_draw.DrawingSpec(color=status_color, thickness=2, circle_radius=2)
                     )
 
-                # --- ОТПРАВКА В C# (IPC) ---
-                # 1. Сжимаем Референс (Тренер)
-                ret_ref, buffer_ref = cv2.imencode(
-                    '.jpg', frame_ref, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-                )
-
-                # 2. Сжимаем Юзера (Ты со скелетом)
-                ret_user, buffer_user = cv2.imencode(
-                    '.jpg', frame_user, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-                )
-
-                # 2. Формируем метаданные (на будущее для UI)
-                meta = {
-                    "score": self.score,
-                    "status": status_text,
-                    "time": current_time_sec
-                }
-
-                # 3. Шлем Multipart сообщение из 4 частей!
-                # [Topic, Metadata, Image1, Image2]
-                self.pub_socket.send_multipart([
-                    b"video",
-                    json.dumps(meta).encode('utf-8'),
-                    buffer_ref.tobytes(),
-                    buffer_user.tobytes()
-                ])
-                # ---------------------------
+                self._send_frame(frame_ref, frame_user, status_text, current_time_sec)
 
                 # Контроль FPS (чтобы не жарить CPU)
                 process_time = time.time() - start_time
@@ -231,3 +243,52 @@ class GameEngine:
             self.pub_socket.close()
             self.cmd_socket.close()
             self.context.term()
+
+    def _send_frame(self, frame_ref, frame_user, status_text, current_time_sec=0):
+        ret_ref, buffer_ref = cv2.imencode(
+            '.jpg', frame_ref, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+        )
+        ret_user, buffer_user = cv2.imencode(
+            '.jpg', frame_user, [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+        )
+        if not ret_ref or not ret_user:
+            return
+
+        meta = {
+            "score": self.score,
+            "status": status_text,
+            "time": current_time_sec
+        }
+
+        self.pub_socket.send_multipart([
+            b"video",
+            json.dumps(meta).encode('utf-8'),
+            buffer_ref.tobytes(),
+            buffer_user.tobytes()
+        ])
+
+    def _run_digitization(self, source, target):
+        self.state = GameState.PROCESSING
+        self.processing_progress = 0
+
+        def update_progress(p):
+            self.processing_progress = p
+
+        try:
+            self.digitizer.create_level_from_video(source, target, update_progress)
+            self.state = GameState.IDLE
+            print("Digitization complete. Ready.")
+        except Exception as e:
+            print(f"Digitization failed: {e}")
+            self.state = GameState.IDLE
+
+    def _loop_processing(self):
+        if self.blank_frame is None:
+            return
+        status_text = f"Creating Level... {self.processing_progress}%"
+        self._send_frame(self.blank_frame, self.blank_frame, status_text, 0)
+
+    def _loop_idle(self):
+        if self.blank_frame is None:
+            return
+        self._send_frame(self.blank_frame, self.blank_frame, "Idle", 0)
