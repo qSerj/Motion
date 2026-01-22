@@ -6,6 +6,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Motion.Desktop.Models; // Нужно для обновления UI из другого потока
 using NetMQ;
 using NetMQ.Sockets;
@@ -22,10 +23,46 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private int _score = 0;
         [ObservableProperty] private string _gameStatus = "Waiting...";
         [ObservableProperty] private IBrush _statusColor = Brushes.White;
+        [ObservableProperty] private string _buttonText = "PAUSE";
 
         public MainWindowViewModel()
         {
             Task.Run(ReceiveVideoFrames);
+        }
+
+        [RelayCommand]
+        public void TogglePause()
+        {
+            if (ButtonText == "PAUSE")
+            {
+                SendCommand(new { type = "pause" });
+                ButtonText = "RESUME";
+            }
+            else
+            {
+                SendCommand(new { type = "resume" });
+                ButtonText = "PAUSE";
+            }
+        }
+
+        private void SendCommand(object cmd)
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    using var socket = new RequestSocket();
+                    socket.Connect("tcp://127.0.0.1:5556");
+
+                    string json = JsonSerializer.Serialize(cmd);
+                    socket.SendFrame(json);
+                    socket.ReceiveFrameString();
+                }
+                catch
+                {
+                    // Ignore command send failures for now.
+                }
+            });
         }
 
         private void ReceiveVideoFrames()

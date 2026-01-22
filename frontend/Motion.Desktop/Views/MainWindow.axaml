@@ -42,7 +42,7 @@
                    Margin="10"/>
         </Grid>
 
-        <Grid ColumnDefinitions="*, 4, *" IsVisible="{Binding !IsWaiting}" Margin="20" IsHitTestVisible="False">
+        <Grid ColumnDefinitions="*, 4, *" IsVisible="{Binding !IsWaiting}" Margin="20">
             
             <StackPanel Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left">
                 <TextBlock Text="SCORE" Foreground="Gray" FontWeight="Bold" FontSize="20"/>
@@ -50,6 +50,13 @@
             </StackPanel>
 
             <StackPanel Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center">
+                <Button Command="{Binding TogglePauseCommand}"
+                        Content="{Binding ButtonText}"
+                        Background="#444"
+                        Foreground="White"
+                        Padding="20,10"
+                        Margin="0,0,0,20"
+                        HorizontalAlignment="Center" />
                 <TextBlock Text="{Binding GameStatus}" Foreground="{Binding StatusColor}" 
                            FontWeight="Black" FontSize="40" 
                            Effect="drop-shadow(2 2 2 black)"/>
