@@ -122,6 +122,18 @@ pip install -r requirements.txt
 python play_game.py
 ```
 
+### Запуск Frontend (C# / Avalonia)
+
+```bash
+# 1. Переход в папку фронтенда
+cd frontend
+
+# 2. Сборка и запуск приложения
+dotnet run --project Motion.Desktop
+```
+
+> При необходимости сначала соберите решение: `dotnet build frontend/Motion.sln`.
+
 ---
 
 ## 🤝 Контрибьютинг
