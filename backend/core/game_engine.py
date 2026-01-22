@@ -70,6 +70,7 @@ class GameEngine:
                 try:
                     cmd_bytes = self.cmd_socket.recv(flags=zmq.NOBLOCK)
                     command = json.loads(cmd_bytes.decode('utf-8'))
+                    print(f"Received cmd: {command}")
                     response = {"status": "ok"}
 
                     if command.get('type') == 'pause':
@@ -80,6 +81,30 @@ class GameEngine:
                         self.is_paused = False
                         if self.audio_player:
                             self.audio_player.set_pause(False)
+                    elif command.get('type') == 'load':
+                        new_video_path = command.get('video_path')
+                        print(f"Loading new video: {new_video_path}")
+
+                        cap_ref.release()
+                        if self.audio_player:
+                            self.audio_player.close_player()
+                            self.audio_player = None
+
+                        self.video_path = new_video_path
+                        cap_ref = cv2.VideoCapture(self.video_path)
+
+                        self.score = 0
+                        self.is_paused = False
+
+                        ref_w = int(cap_ref.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        ref_h = int(cap_ref.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        video_fps = cap_ref.get(cv2.CAP_PROP_FPS)
+                        if video_fps == 0:
+                            video_fps = 30
+                        target_delay = 1.0 / (video_fps * self.speed)
+
+                        if SOUND_AVAILABLE and self.speed == 1.0:
+                            self.audio_player = MediaPlayer(self.video_path)
                     elif command.get('type') == 'stop':
                         self.cmd_socket.send_json({"status": "stopping"})
                         break

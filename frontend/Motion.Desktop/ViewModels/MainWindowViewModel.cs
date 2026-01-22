@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Motion.Desktop.Models; // Нужно для обновления UI из другого потока
+using Motion.Desktop.Services;
 using NetMQ;
 using NetMQ.Sockets;
 
@@ -24,6 +25,8 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private string _gameStatus = "Waiting...";
         [ObservableProperty] private IBrush _statusColor = Brushes.White;
         [ObservableProperty] private string _buttonText = "PAUSE";
+
+        private readonly MtpFileService _mtpService = new MtpFileService();
 
         public MainWindowViewModel()
         {
@@ -63,6 +66,40 @@ namespace Motion.Desktop.ViewModels
                     // Ignore command send failures for now.
                 }
             });
+        }
+
+        public async Task LoadLevelAsync(string mtpFilePath)
+        {
+            try
+            {
+                StatusText = "Extracting...";
+                IsWaiting = true;
+
+                string videoTempPath = await _mtpService.ExtractVideoToTempAsync(mtpFilePath);
+
+                var manifest = await _mtpService.ReadManifestAsync(mtpFilePath);
+                if (manifest != null)
+                {
+                    StatusText = $"Loading: {manifest.Title}";
+                }
+
+                var cmd = new
+                {
+                    type = "load",
+                    video_path = videoTempPath
+                };
+
+                SendCommand(cmd);
+
+                Score = 0;
+                GameStatus = "";
+                IsWaiting = false;
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Error: {ex.Message}";
+                IsWaiting = true;
+            }
         }
 
         private void ReceiveVideoFrames()
