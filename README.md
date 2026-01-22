@@ -25,13 +25,13 @@
 
 ```mermaid
 graph LR
-    subgraph Backend [Python Core "The Brain"]
+    subgraph Backend ["Python Core: The Brain"]
         MP[MediaPipe / YOLO]
         Math[Geometry & Logic]
         Audio[Audio Processing]
     end
 
-    subgraph Frontend [C# / Avalonia "The Face"]
+    subgraph Frontend ["C# / Avalonia: The Face"]
         UI[User Interface]
         Render[Direct2D / Skia Render]
         Editor[Level Editor]
