@@ -103,14 +103,14 @@ graph LR
 
 ### Предварительные требования
 * Python 3.11+
-* .NET 8.0 SDK
+* .NET 10.0 SDK
 * Веб-камера
 
 ### Запуск (Текущая Python версия)
 
 ```bash
 # 1. Клонирование
-git clone [https://github.com/qSerj/Motion.git](https://github.com/qSerj/Motion.git)
+git clone https://github.com/qSerj/Motion.git
 
 # 2. Python окружение
 cd Motion
