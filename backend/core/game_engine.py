@@ -17,7 +17,7 @@ except ImportError:
 
 
 class GameEngine:
-    def __init__(self, json_path, video_path, tolerance=25, speed=1.0, zmq_port=5555):
+    def __init__(self, json_path, video_path, tolerance=25, speed=1.0, zmq_port=5555, cmd_port=5556):
         self.engine = PoseEngine()
         self.tolerance = tolerance
         self.video_path = video_path
@@ -25,10 +25,15 @@ class GameEngine:
 
         # --- ZMQ Setup ---
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
-        address = f"tcp://127.0.0.1:{zmq_port}"
-        self.socket.bind(address)
-        print(f"[GameEngine] Broadcasting on {address}")
+        self.pub_socket = self.context.socket(zmq.PUB)
+        pub_address = f"tcp://127.0.0.1:{zmq_port}"
+        self.pub_socket.bind(pub_address)
+
+        self.cmd_socket = self.context.socket(zmq.REP)
+        cmd_address = f"tcp://127.0.0.1:{cmd_port}"
+        self.cmd_socket.bind(cmd_address)
+
+        print(f"[GameEngine] Stream on {pub_address}, Commands on {cmd_address}")
         # -----------------
 
         with open(json_path, 'r') as f:
@@ -37,6 +42,7 @@ class GameEngine:
         self.pattern_map = {f"{d['timestamp']:.1f}": d['angles'] for d in self.pattern}
         self.score = 0
         self.audio_player = None
+        self.is_paused = False
 
     def run(self):
         cap_ref = cv2.VideoCapture(self.video_path)
@@ -60,6 +66,31 @@ class GameEngine:
         try:
             while True:
                 start_time = time.time()
+
+                try:
+                    cmd_bytes = self.cmd_socket.recv(flags=zmq.NOBLOCK)
+                    command = json.loads(cmd_bytes.decode('utf-8'))
+                    response = {"status": "ok"}
+
+                    if command.get('type') == 'pause':
+                        self.is_paused = True
+                        if self.audio_player:
+                            self.audio_player.set_pause(True)
+                    elif command.get('type') == 'resume':
+                        self.is_paused = False
+                        if self.audio_player:
+                            self.audio_player.set_pause(False)
+                    elif command.get('type') == 'stop':
+                        self.cmd_socket.send_json({"status": "stopping"})
+                        break
+
+                    self.cmd_socket.send_json(response)
+                except zmq.Again:
+                    pass
+
+                if self.is_paused:
+                    time.sleep(0.1)
+                    continue
 
                 ret_ref, frame_ref = cap_ref.read()
                 ret_user, frame_user = cap_user.read()
@@ -151,7 +182,7 @@ class GameEngine:
 
                 # 3. Шлем Multipart сообщение из 4 частей!
                 # [Topic, Metadata, Image1, Image2]
-                self.socket.send_multipart([
+                self.pub_socket.send_multipart([
                     b"video",
                     json.dumps(meta).encode('utf-8'),
                     buffer_ref.tobytes(),
@@ -172,5 +203,6 @@ class GameEngine:
             cap_user.release()
             if self.audio_player:
                 self.audio_player.close_player()
-            self.socket.close()
+            self.pub_socket.close()
+            self.cmd_socket.close()
             self.context.term()
