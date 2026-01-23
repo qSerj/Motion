@@ -3,79 +3,133 @@
         xmlns:vm="using:Motion.Desktop.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
         x:Class="Motion.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Motion.Desktop">
+        Title="Motion Trainer AI"
+        Background="#1E1E1E"
+        TransparencyLevelHint="AcrylicBlur"
+        WindowStartupLocation="CenterScreen">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <Panel>
-        <TextBlock Text="{Binding StatusText}" 
-                   IsVisible="{Binding IsWaiting}"
-                   Foreground="White"
-                   HorizontalAlignment="Center" 
-                   VerticalAlignment="Center"/>
+    <Window.Styles>
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        
+        <Style Selector="Button.dark">
+            <Setter Property="Background" Value="#333333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#555"/>
+        </Style>
+        <Style Selector="Button.dark:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#444444"/>
+            <Setter Property="BorderBrush" Value="#888"/>
+        </Style>
+        
+        <Style Selector="TextBlock.status">
+            <Setter Property="Effect" Value="drop-shadow(2 2 4 black)"/>
+        </Style>
+    </Window.Styles>
 
-        <Grid IsVisible="{Binding !IsWaiting}">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="4" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+    <Grid RowDefinitions="Auto, *, Auto">
 
-            <Image Grid.Column="0" 
-                   Source="{Binding ReferenceFrame}" 
-                   Stretch="Uniform" 
-                   Margin="10"/>
+        <Border Grid.Row="0" Background="#252526" Padding="15" BoxShadow="0 4 10 0 #40000000">
+            <Grid ColumnDefinitions="Auto, *, Auto">
+                
+                <Button Grid.Column="0" 
+                        Classes="dark"
+                        Content="📂 OPEN LEVEL"
+                        Click="OpenFileButton_Clicked"/>
 
-            <GridSplitter Grid.Column="1" 
-                          Background="#333" 
-                          ResizeDirection="Columns"/>
+                <TextBlock Grid.Column="1" 
+                           Text="MOTION TRAINER" 
+                           Foreground="#666" 
+                           VerticalAlignment="Center" 
+                           HorizontalAlignment="Center" 
+                           FontWeight="Black" 
+                           LetterSpacing="2"/>
 
-            <Image Grid.Column="2" 
-                   Source="{Binding UserFrame}" 
-                   Stretch="Uniform" 
-                   Margin="10"/>
-        </Grid>
-
-        <Grid ColumnDefinitions="*, 4, *" IsVisible="{Binding !IsWaiting}" Margin="20">
-            
-            <StackPanel Grid.Column="0" VerticalAlignment="Top" HorizontalAlignment="Left">
-                <TextBlock Text="SCORE" Foreground="Gray" FontWeight="Bold" FontSize="20"/>
-                <TextBlock Text="{Binding Score}" Foreground="White" FontWeight="Bold" FontSize="60"/>
-
-                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,20,0,0">
-                    <Button Content="📂 OPEN LEVEL"
-                            Click="OpenFileButton_Clicked"
-                            Background="#222"
-                            Foreground="White"
-                            IsHitTestVisible="True"/>
-                    <Button Content="⚡ CREATE LEVEL"
-                            Click="CreateLevelButton_Clicked"
-                            Background="#8A2BE2"
-                            Foreground="White"
-                            IsHitTestVisible="True"
-                            ToolTip.Tip="Turn any video into a level"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="SCORE:" VerticalAlignment="Center" Foreground="#AAA"/>
+                    <TextBlock Text="{Binding Score}" 
+                               Foreground="#FFD700" 
+                               FontWeight="Bold" 
+                               FontSize="28" 
+                               VerticalAlignment="Center"/>
                 </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1" Background="Black">
+            <StackPanel IsVisible="{Binding IsWaiting}" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center" 
+                        Spacing="10">
+                <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusText}" 
+                           Foreground="White" 
+                           FontSize="18"/>
             </StackPanel>
 
-            <StackPanel Grid.Column="2" VerticalAlignment="Bottom" HorizontalAlignment="Center">
-                <Button Command="{Binding TogglePauseCommand}"
-                        Content="{Binding ButtonText}"
-                        Background="#444"
-                        Foreground="White"
-                        Padding="20,10"
-                        Margin="0,0,0,20"
-                        HorizontalAlignment="Center" />
-                <TextBlock Text="{Binding GameStatus}" Foreground="{Binding StatusColor}" 
-                           FontWeight="Black" FontSize="40" 
-                           Effect="drop-shadow(2 2 2 black)"/>
-            </StackPanel>
+            <Grid IsVisible="{Binding !IsWaiting}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="4" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Image Grid.Column="0" 
+                       Source="{Binding ReferenceFrame}" 
+                       Stretch="Uniform"/>
+
+                <GridSplitter Grid.Column="1" 
+                              Background="#333" 
+                              ResizeDirection="Columns"/>
+
+                <Image Grid.Column="2" 
+                       Source="{Binding UserFrame}" 
+                       Stretch="Uniform"/>
+                
+                <TextBlock Grid.Column="0" Grid.ColumnSpan="3"
+                           Text="{Binding GameStatus}" 
+                           Classes="status"
+                           Foreground="{Binding StatusColor}"
+                           FontWeight="Black" 
+                           FontSize="72"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           IsHitTestVisible="False"
+                           Opacity="0.8"/>
+            </Grid>
         </Grid>
-    </Panel>
-    
+
+        <Border Grid.Row="2" Background="#252526" Padding="15">
+            <Grid>
+                <Button Classes="dark"
+                        Command="{Binding TogglePauseCommand}"
+                        Content="{Binding ButtonText}"
+                        HorizontalAlignment="Center"
+                        Width="150"
+                        HorizontalContentAlignment="Center"/>
+                
+                <TextBlock Text="{Binding CurrentState}" 
+                           Foreground="#555" 
+                           FontSize="10" 
+                           HorizontalAlignment="Right" 
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+    </Grid>
 </Window>
