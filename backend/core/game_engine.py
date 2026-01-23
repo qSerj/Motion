@@ -56,6 +56,7 @@ class GameEngine:
         self.cap_user = cv2.VideoCapture(0)  # Вебка всегда активна
         self.audio_player = None
         self.pattern_map = {}
+        self.timeline = []
 
         # Параметры
         self.score = 0
@@ -184,6 +185,20 @@ class GameEngine:
                 self.pattern_map = {f"{d['timestamp']:.1f}": d['angles'] for d in pat}
         else:
             self.pattern_map = {}
+
+        timeline_path = cmd.get('timeline_path')
+        self.timeline = []
+        if timeline_path and os.path.exists(timeline_path):
+            try:
+                with open(timeline_path, 'r') as f:
+                    data = json.load(f)
+                    for track in data.get('tracks', []):
+                        for evt in track.get('events', []):
+                            self.timeline.append(evt)
+                    self.timeline.sort(key=lambda x: x['time'])
+                print(f"Timeline loaded: {len(self.timeline)} events")
+            except Exception as e:
+                print(f"Error loading timeline: {e}")
 
         if SOUND_AVAILABLE:
             self.audio_player = MediaPlayer(video_path)

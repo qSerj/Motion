@@ -1,38 +1,26 @@
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace Motion.Desktop.Models.Mtp
 {
     public class MtpManifest
     {
-        [JsonPropertyName("format_version")]
-        public string FormatVersion { get; set; } = "1.0";
-
-        [JsonPropertyName("id")]
-        public string Id { get; set; } = "";
+        [JsonPropertyName("version")]
+        public string Version { get; set; } = "2.0";
 
         [JsonPropertyName("title")]
-        public string Title { get; set; } = "New Level";
+        public string Title { get; set; } = "Unknown";
 
-        [JsonPropertyName("author")]
-        public string Author { get; set; } = "User";
+        [JsonPropertyName("files")]
+        public Dictionary<string, string> Files { get; set; } = new();
 
-        [JsonPropertyName("difficulty")]
-        public string Difficulty { get; set; } = "Normal";
+        [JsonIgnore]
+        public string VideoPath => Files.ContainsKey("video") ? Files["video"] : null;
 
-        [JsonPropertyName("duration_sec")]
-        public double DurationSec { get; set; }
+        [JsonIgnore]
+        public string PatternsPath => Files.ContainsKey("patterns") ? Files["patterns"] : null;
 
-        [JsonPropertyName("description")]
-        public string Description { get; set; } = "";
-
-        // Пути внутри ZIP архива
-        [JsonPropertyName("preview_image")]
-        public string PreviewImage { get; set; } = "assets/preview.jpg";
-
-        [JsonPropertyName("target_video")]
-        public string TargetVideo { get; set; } = "assets/video.mp4";
-        
-        [JsonPropertyName("patterns_file")]
-        public string PatternsFile { get; set; } = "data/patterns.json"; // Значение по умолчанию
+        [JsonIgnore]
+        public string TimelinePath => Files.ContainsKey("timeline") ? Files["timeline"] : null;
     }
 }
