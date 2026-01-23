@@ -40,9 +40,9 @@ graph LR
     Backend <-->|ZeroMQ / IPC| Frontend
 ```
 
-* **Backend (Python 3.11):** Отвечает за тяжелые вычисления, нейросети (MediaPipe/YOLO), математику скелета и обработку сценария уровня. Работает в headless-режиме.
-* **Frontend (C# / Avalonia UI):** Кроссплатформенный интерфейс (Windows/Linux/macOS). Отвечает за рендеринг видеопотока, меню, настройки и Редактор уровней.
-* **Транспорт:** Обмен данными через **ZeroMQ** (сверхбыстрая передача кадров и JSON-команд).
+* **Backend (Python 3.11):** Отвечает за трекинг позы (MediaPipe), математику скелета и игровой цикл. Работает в headless-режиме, публикует кадры и принимает команды управления.
+* **Frontend (C# / Avalonia UI):** Кроссплатформенный интерфейс (Windows/Linux/macOS). Отрисовывает два потока (референс и пользователь), показывает статус и отправляет команды (load/pause/resume).
+* **Транспорт:** **ZeroMQ**: PUB/SUB для кадров и REQ/REP для команд.
 
 ---
 
@@ -50,11 +50,11 @@ graph LR
 
 Контент хранится в универсальных контейнерах (ZIP-архив с расширением `.mtp`). Это позволяет легко обмениваться тренировками.
 
-**Структура пакета:**
-* `manifest.json` — Метаданные (название, автор, сложность, кол-во игроков).
-* `timeline.json` — Сценарий уровня (тайминги, события, проверки).
-* `assets/` — Медиа-файлы (видео тренера, озвучка, оверлеи, картинки-подсказки).
-* `patterns/` — "Цифровые партитуры" движений (эталонные углы и координаты).
+**Текущая структура (MTP v2):**
+* `manifest.json` — метаданные и ссылки на файлы.
+* `patterns.json` — "цифровая партитура" движений (углы по таймлайну).
+* `video.mp4` — основной референсный ролик.
+* `timeline.json` — сценарий событий (опционально).
 
 ---
 
@@ -67,13 +67,14 @@ graph LR
 * [x] Прототип игрового движка (Split-screen, счетчики).
 
 ### Фаза 2: Гибридное ядро (В процессе ✅)
-* [x] Реализация IPC транспорта (ZeroMQ) между Python и C#.
-* [x] Создание базового окна плеера на Avalonia (C#).
-* [x] Рендеринг видеопотока из Python в C# окне.
+* [x] Реализация IPC (ZeroMQ) между Python и C#.
+* [x] Канал команд (load/pause/resume/digitize).
+* [x] Рендеринг двух видеопотоков (референс + пользователь) в Avalonia.
+* [x] Загрузка .mtp v2 (manifest + patterns + video).
 
 ### Фаза 3: Платформа и Редактор
 * [ ] **Редактор уровней (UI):** Визуальный таймлайн для создания `.mtp` пакетов.
-* [ ] **Контейнеризация:** Логика упаковки/распаковки `.mtp`.
+* [ ] **Timeline-движок:** Выполнение событий `timeline.json`.
 * [ ] **Управление медиа:** Синхронизация звука, видео и оверлеев.
 
 ### Фаза 4: Геймплей и AI
@@ -90,6 +91,7 @@ graph LR
 * `mediapipe` / `ultralytics` (AI Tracking)
 * `numpy` (Math)
 * `pyzmq` (Transport)
+* `ffpyplayer` (опционально, звук)
 
 **UI (Frontend):**
 * C# .NET 8
@@ -116,10 +118,10 @@ git clone https://github.com/qSerj/Motion.git
 cd Motion
 python -m venv .venv
 source .venv/bin/activate  # или .venv\Scripts\activate на Windows
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 
-# 3. Запуск прототипа
-python play_game.py
+# 3. Запуск backend (ожидает команды от UI)
+python backend/play_game.py
 ```
 
 ### Запуск Frontend (C# / Avalonia)
@@ -129,7 +131,7 @@ python play_game.py
 cd frontend
 
 # 2. Сборка и запуск приложения
-dotnet run --project Motion.Desktop
+dotnet run --project frontend/Motion.Desktop
 ```
 
 > При необходимости сначала соберите решение: `dotnet build frontend/Motion.sln`.
