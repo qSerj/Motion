@@ -76,16 +76,17 @@ class VideoDigitizer:
 
         cap.release()
 
-        print(f"[Digitizer] Packing to {output_mtp_path}...")
+        print(f"[Digitizer] Packing v2 to {output_mtp_path}...")
 
         filename = os.path.basename(source_video_path)
         manifest = {
-            "format_version": "1.0",
+            "version": "2.0",
             "title": os.path.splitext(filename)[0],
-            "author": "Auto-Digitizer",
-            "target_video": "video.mp4",
-            "patterns_file": "patterns.json",
-            "duration_sec": total_frames / fps
+            "duration": total_frames / fps,
+            "files": {
+                "video": "video.mp4",
+                "patterns": "patterns.json"
+            }
         }
 
         with zipfile.ZipFile(output_mtp_path, 'w', zipfile.ZIP_DEFLATED) as zf:
