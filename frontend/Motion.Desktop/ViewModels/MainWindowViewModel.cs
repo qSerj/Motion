@@ -197,6 +197,7 @@ namespace Motion.Desktop.ViewModels
                                 };
 
                                 ActiveOverlays.Clear();
+                                
                                 if (data.Overlays.ValueKind == JsonValueKind.Array)
                                 {
                                     foreach (var evt in data.Overlays.EnumerateArray())
