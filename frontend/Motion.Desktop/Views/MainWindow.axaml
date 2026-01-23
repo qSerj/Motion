@@ -47,10 +47,16 @@
         <Border Grid.Row="0" Background="#252526" Padding="15" BoxShadow="0 4 10 0 #40000000">
             <Grid ColumnDefinitions="Auto, *, Auto">
                 
-                <Button Grid.Column="0" 
-                        Classes="dark"
-                        Content="📂 OPEN LEVEL"
-                        Click="OpenFileButton_Clicked"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button 
+                            Classes="dark"
+                            Content="📂 OPEN LEVEL"
+                            Click="OpenFileButton_Clicked"/>
+                    <Button Classes="dark"
+                            Content="⚡ CREATE"
+                            Background="#8A2BE2" 
+                            Click="CreateLevelButton_Clicked"/>
+                </StackPanel>
 
                 <TextBlock Grid.Column="1" 
                            Text="MOTION TRAINER" 
