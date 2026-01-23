@@ -1,4 +1,4 @@
-# Motion Trainer AI — Техническое задание и документация (черновик)
+# Motion Trainer AI — Техническое задание и документация (актуальное состояние)
 
 > Цель документа: зафиксировать текущее состояние проекта, форматы взаимодействия и будущие требования к развитию платформы. Документ написан «от кода», но ориентирован на дальнейшее проектирование и развитие.
 
@@ -27,69 +27,108 @@
 - Библиотеки: `mediapipe`, `opencv-python`, `numpy`, `pyzmq`, опционально `ffpyplayer`.
 - Функции:
   - Детекция позы, получение 3D landmarks.
-  - Сравнение углов эталона и пользователя.
-  - Формирование видеопотока (склейка референса и камеры).
-  - Публикация кадра и метаданных через ZeroMQ (PUB).
+  - Подготовка двух видеопотоков (референс + пользователь).
+  - Публикация кадров и метаданных через ZeroMQ (PUB).
+  - Обработка команд управления через ZeroMQ (REP).
+  - Оцифровка видео в MTP v2 (`manifest.json` + `patterns.json` + `video.mp4`).
 
 **Frontend (C# .NET, Avalonia)**
 - Библиотеки: `Avalonia`, `NetMQ`.
 - Функции:
   - Подключение к PUB-сокету backend (SUB).
-  - Получение кадра и метаданных.
-  - Отображение текущего кадра и статуса в UI.
+  - Получение двух кадров (референс и пользователь) и метаданных.
+  - Отображение кадров и статуса в UI.
+  - Отправка команд (load/pause/resume/digitize).
 
 ### 3.2 Поток данных (текущая реализация)
 
-1. Backend читает:
-   - видео-референс (танец/упражнение);
+1. Frontend отправляет команду `load`, передавая пути к видео и паттерну (из .mtp).
+2. Backend читает:
+   - видео-референс;
    - вебкамеру пользователя.
-2. Для каждого кадра:
+3. Для каждого кадра:
    - строит скелет пользователя;
-   - вычисляет углы (например локти);
-   - сравнивает с эталоном на текущий таймштамп;
-   - формирует статус (PERFECT/GOOD/MISS) и счет;
-   - склеивает референс + пользовательский кадр в один кадр;
-   - отправляет JPEG + метаданные в ZeroMQ PUB.
-3. Frontend:
+   - накладывает скелет на кадр пользователя;
+   - обновляет метаданные (статус/счет/время);
+   - отправляет **две** JPEG-картинки (референс + пользователь) и JSON-метаданные в ZeroMQ PUB.
+4. Frontend:
    - подписывается на тему `video`;
-   - принимает метаданные и изображение;
+   - принимает метаданные и оба изображения;
    - обновляет UI.
 
 ## 4. Формат IPC (Backend ↔ Frontend)
 
 ### 4.1 Транспорт
-- ZeroMQ PUB/SUB.
-- **Backend**: `bind` на `tcp://127.0.0.1:5555`.
-- **Frontend**: `connect` на `tcp://127.0.0.1:5555`.
+- **Видео**: ZeroMQ PUB/SUB.
+  - **Backend**: `bind` на `tcp://127.0.0.1:5555`.
+  - **Frontend**: `connect` на `tcp://127.0.0.1:5555`.
+- **Команды**: ZeroMQ REP/REQ.
+  - **Backend**: `bind` на `tcp://127.0.0.1:5556`.
+  - **Frontend**: `connect` на `tcp://127.0.0.1:5556`.
 
 ### 4.2 Формат сообщения (multipart)
-Сообщение состоит из 3 частей:
+Сообщение состоит из 4 частей:
 
 1. **Topic**: строка `video`.
 2. **Metadata JSON**: строка JSON, пример:
 
 ```json
 {
+  "state": "PLAYING",
   "score": 120,
+  "time": 12.3,
   "status": "PERFECT!",
-  "time": 12.3
+  "progress": 0
 }
 ```
 
-3. **Image bytes**: JPEG-байты.
+3. **Reference image bytes**: JPEG-байты референса.
+4. **User image bytes**: JPEG-байты пользователя.
 
 ### 4.3 Контракт метаданных
 | Поле | Тип | Описание | Источник |
 |---|---|---|---|
-| `score` | int | Текущий счет | Backend (`GameEngine`) |
-| `status` | string | Статус попадания (`PERFECT!`, `GOOD`, `MISS`) | Backend |
+| `state` | string | Текущее состояние (`IDLE/PLAYING/PAUSED/FINISHED/PROCESSING`) | Backend |
+| `score` | int | Текущий счет | Backend |
+| `status` | string | Статус/сообщение | Backend |
 | `time` | float | Текущее время в секундах | Backend |
+| `progress` | int | Прогресс оцифровки (0-100) | Backend |
 
 Frontend десериализует JSON в `GameData`.
 
 ### 4.4 Частота кадров
-- Backend ограничивает FPS через `target_delay`, зависящий от FPS референсного видео и `speed`.
-- Изображение кодируется в JPEG (`quality=70`), чтобы снизить нагрузку на IPC.
+- Backend ограничивает FPS через `target_delay`, зависящий от FPS референсного видео.
+- Изображение кодируется в JPEG (`quality=50`), чтобы снизить нагрузку на IPC.
+
+### 4.5 Команды управления (REQ/REP)
+
+**Команды (JSON):**
+
+```json
+{ "type": "load", "video_path": "...", "json_path": "...", "timeline_path": "..." }
+```
+
+```json
+{ "type": "pause" }
+```
+
+```json
+{ "type": "resume" }
+```
+
+```json
+{ "type": "restart" }
+```
+
+```json
+{ "type": "digitize", "source_path": "...", "output_path": "..." }
+```
+
+```json
+{ "type": "stop" }
+```
+
+**Ответ:** `{"status":"ok"}` либо `{"status":"error","msg":"..."}`.
 
 ## 5. Форматы данных (детально)
 
@@ -120,22 +159,22 @@ Frontend десериализует JSON в `GameData`.
 - Сейчас учитываются только локти (см. TODO в коде).
 
 ### 5.2 Контейнер `.mtp` (проектный формат)
-**Статус**: формат описан концептуально, еще не реализован.
+**Статус**: реализован MTP v2 для базового кейса (video + patterns).
 
-Предлагаемая структура (ZIP):
+Актуальная структура (ZIP):
 ```
 <package>.mtp/
   manifest.json
-  timeline.json
-  assets/
-  patterns/
+  patterns.json
+  video.mp4
+  timeline.json    (опционально)
 ```
 
 **Назначение файлов:**
-- `manifest.json`: метаданные уровня (название, автор, сложность, режимы, требуемые ассеты).
-- `timeline.json`: сценарий уровней (ивенты/подсказки/триггеры).
-- `assets/`: видео/аудио/изображения.
-- `patterns/`: эталоны движений (JSON).
+- `manifest.json`: метаданные уровня и карта файлов (ключи `video`, `patterns`, `timeline`).
+- `patterns.json`: эталоны движений (JSON).
+- `video.mp4`: референсное видео.
+- `timeline.json`: сценарий уровней (ивенты/подсказки/триггеры, не исполняется).
 
 ## 6. Backend (Python) — состав и зоны ответственности
 
@@ -148,44 +187,40 @@ Frontend десериализует JSON в `GameData`.
   - `calculate_angle_3d`, `calculate_distance`.
 - `backend/core/game_engine.py`
   - Основной игровой цикл.
-  - IPC pub, подготовка кадров и метаданных.
+  - IPC PUB/REP, подготовка кадров и метаданных.
+- `backend/core/digitizer.py`
+  - `VideoDigitizer` — создание MTP v2 (manifest + patterns + video).
 - `backend/processors/video_processor.py`
-  - `VideoDigitizer` — построение партитуры из видео.
+  - Legacy `VideoDigitizer` — генерация JSON без упаковки.
 - `backend/play_game.py`
-  - Точка запуска игры (читает JSON + видео).
+  - Точка запуска игры (ожидает команды `load`).
 
 ### 6.2 Сценарии запуска
 
-**Оцифровка видео**
-1. Задать `VIDEO_FILE` и `OUTPUT_FILE` в `backend/main_digitizer.py`.
-2. Запустить:
-
-```bash
-python backend/main_digitizer.py
-```
+**Оцифровка видео (MTP v2)**
+1. Отправить команду `digitize` на порт `5556` (frontend делает это автоматически при вызове).
+2. Backend создаст `.mtp` архив с `manifest.json`, `patterns.json`, `video.mp4`.
 
 **Запуск игры (backend only)**
-1. Убедиться, что существуют `backend/data/dance_data.json` и `backend/data/dance_video.mp4`.
-2. Запустить:
+1. Запустить backend:
 
 ```bash
 python backend/play_game.py
 ```
 
 ### 6.3 Логика оценки (текущая)
-- Вычисляются углы локтей для пользователя.
-- Берутся эталонные углы из `pattern_map` по текущему `timestamp` (округление до 0.1 сек).
-- Диапазоны точности:
-  - `PERFECT!` — оба локтя в пределах `tolerance`.
-  - `GOOD` — оба локтя в пределах `tolerance * 1.5`.
-  - иначе `MISS`.
+- В игровом цикле выполняется трекинг позы и отрисовка скелета.
+- Сравнение углов и скоринг временно отключены (статус отправляется пустой строкой).
 
 ## 7. Frontend (C# / Avalonia) — состав и зоны ответственности
 
 ### 7.1 Модули
 - `MainWindowViewModel`:
   - Подписка на ZeroMQ (NetMQ) и прием кадров.
-  - Обновление `CurrentFrame`, `Score`, `GameStatus`, `StatusColor`.
+  - Обновление `ReferenceFrame`, `UserFrame`, `Score`, `GameStatus`, `StatusColor`.
+  - Отправка команд через REQ.
+- `MtpFileService`:
+  - Чтение `manifest.json` и извлечение ресурсов во временную папку.
 - `GameData`:
   - Модель данных, соответствующая JSON метаданным из backend.
 
@@ -223,7 +258,7 @@ python backend/play_game.py
 
 ## 10. Открытые вопросы
 
-- Полная спецификация `timeline.json` (формат еще не реализован).
+- Исполнение событий `timeline.json` в рантайме.
 - Синхронизация аудио при замедлении (`speed` != 1.0).
 - Расширение JSON-структуры паттернов (углы, позы, траектории).
 - Нужен ли режим передачи «сырых» landmarks в UI (для кастомного рендера).
@@ -233,4 +268,4 @@ python backend/play_game.py
 - Backend IPC и логика `GameEngine`: `backend/core/game_engine.py`.
 - Формат метаданных: `frontend/Motion.Desktop/Models/GameData.cs`.
 - Подписка на ZMQ: `frontend/Motion.Desktop/ViewModels/MainWindowViewModel.cs`.
-- Оцифровка паттерна: `backend/processors/video_processor.py`.
+- Оцифровка MTP v2: `backend/core/digitizer.py`.
