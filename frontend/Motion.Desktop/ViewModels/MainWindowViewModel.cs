@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -26,6 +27,8 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private IBrush _statusColor = Brushes.White;
         [ObservableProperty] private string _buttonText = "PAUSE";
         [ObservableProperty] private string _currentState = "IDLE";
+
+        public ObservableCollection<OverlayItem> ActiveOverlays { get; } = new();
         
         private readonly MtpFileService _mtpService = new MtpFileService();
 
@@ -192,6 +195,23 @@ namespace Motion.Desktop.ViewModels
                                     "MISS" => Brushes.Red,
                                     _ => Brushes.White
                                 };
+
+                                ActiveOverlays.Clear();
+                                if (data.Overlays.ValueKind == JsonValueKind.Array)
+                                {
+                                    foreach (var evt in data.Overlays.EnumerateArray())
+                                    {
+                                        try
+                                        {
+                                            var overlay = OverlayItem.FromJson(evt, null);
+                                            ActiveOverlays.Add(overlay);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            Console.WriteLine("Overlay parse error: " + e.Message);
+                                        }
+                                    }
+                                }
                             }
                         });
                     }

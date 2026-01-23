@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Motion.Desktop.Models;
 
@@ -15,4 +17,7 @@ public class GameData
         
     [JsonPropertyName("status")]
     public string Status { get; set; }
+    
+    [JsonPropertyName("overlays")]
+    public JsonElement Overlays { get; set; }
 }

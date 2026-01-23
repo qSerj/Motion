@@ -257,12 +257,20 @@ class GameEngine:
         ret1, buf_ref = cv2.imencode('.jpg', ref, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         ret2, buf_user = cv2.imencode('.jpg', user, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
 
+        active_overlays = []
+        for evt in getattr(self, 'timeline', []):
+            t_start = evt.get('time', 0)
+            t_end = t_start + evt.get('duration', 0)
+            if t_start <= self.current_time < t_end:
+                active_overlays.append(evt)
+
         meta = {
             "state": self.state.value,
             "score": self.score,
             "time": self.current_time,
             "status": status,
-            "progress": self.processing_progress  # Для оцифровщика
+            "progress": self.processing_progress,
+            "overlays": active_overlays
         }
 
         self.pub_socket.send_multipart([
