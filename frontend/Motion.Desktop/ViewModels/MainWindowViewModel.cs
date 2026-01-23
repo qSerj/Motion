@@ -73,29 +73,33 @@ namespace Motion.Desktop.ViewModels
         {
             try
             {
-                StatusText = "Reading Manifest...";
+                StatusText = "Manifest v2...";
                 IsWaiting = true;
 
                 var manifest = await _mtpService.ReadManifestAsync(mtpFilePath);
-                if (manifest == null) throw new Exception("Invalid Manifest");
+                if (manifest == null) throw new Exception("Invalid .mtp archive");
 
-                StatusText = $"Extracting: {manifest.Title}";
+                if (manifest.Version != "2.0")
+                {
+                    Console.WriteLine($"Warning: Loading format {manifest.Version}");
+                }
 
-                // 1. Извлекаем Видео
-                string videoPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.TargetVideo);
+                StatusText = $"Loading: {manifest.Title}";
+
+                string? videoPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.VideoPath);
                 
-                // 2. Извлекаем Данные (JSON с углами)
-                string patternsPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.PatternsFile);
+                string? patternsPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.PatternsPath);
+                
+                if (videoPath == null) throw new Exception("Manifest is missing 'video' file definition");
 
-                if (string.IsNullOrEmpty(videoPath)) throw new Exception("Video not found in package");
-                // Если patternsPath пустой, можно играть просто как видеоплеер, но лучше предупредить
+                string? timelinePath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.TimelinePath);
 
-                // 3. Шлем команду (теперь с двумя путями)
                 var cmd = new 
                 { 
                     type = "load", 
                     video_path = videoPath,
-                    json_path = patternsPath // <--- Новое поле
+                    json_path = patternsPath,
+                    timeline_path = timelinePath
                 };
                 
                 SendCommand(cmd);

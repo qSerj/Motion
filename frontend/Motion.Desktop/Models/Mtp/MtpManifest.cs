@@ -11,16 +11,19 @@ namespace Motion.Desktop.Models.Mtp
         [JsonPropertyName("title")]
         public string Title { get; set; } = "Unknown";
 
+        [JsonPropertyName("duration")]
+        public double Duration { get; set; }
+
         [JsonPropertyName("files")]
         public Dictionary<string, string> Files { get; set; } = new();
 
         [JsonIgnore]
-        public string VideoPath => Files.ContainsKey("video") ? Files["video"] : null;
+        public string VideoPath => Files.GetValueOrDefault("video");
 
         [JsonIgnore]
-        public string PatternsPath => Files.ContainsKey("patterns") ? Files["patterns"] : null;
+        public string PatternsPath => Files.GetValueOrDefault("patterns");
 
         [JsonIgnore]
-        public string TimelinePath => Files.ContainsKey("timeline") ? Files["timeline"] : null;
+        public string TimelinePath => Files.GetValueOrDefault("timeline");
     }
 }
