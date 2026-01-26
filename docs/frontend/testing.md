@@ -16,3 +16,18 @@ Use the test framework already standard for the solution (recommended: xUnit).
 ## Avoid
 - Tests that require a running backend by default.
 - Heavy UI tests; keep smoke tests minimal if added.
+
+## Run
+
+From repo root:
+
+```bash
+cd frontend/Motion.Desktop.Tests
+dotnet test
+```
+
+Or:
+
+```bash
+dotnet test frontend/Motion.Desktop.Tests/Motion.Desktop.Tests.csproj
+```

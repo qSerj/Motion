@@ -36,3 +36,8 @@ Optional: add a small headless UI smoke test suite (keep it minimal).
 - If UI semantics change -> docs/frontend/design.md
 - If IPC usage changes -> docs/ipc.md
 - If MTP interpretation changes -> docs/MTP_FORMAT_v2.md + compatibility notes
+
+
+## Tests in this repo
+- Motion.Desktop.Tests/ : xUnit regression tests for services and model parsing.
+- Run: `dotnet test frontend/Motion.Desktop.Tests/Motion.Desktop.Tests.csproj`
