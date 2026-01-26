@@ -1,6 +1,3 @@
-\
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using Motion.Desktop.Models.Mtp;
 using Xunit;

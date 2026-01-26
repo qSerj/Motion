@@ -1,0 +1,92 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:editor="clr-namespace:Motion.Desktop.ViewModels.Editor"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Motion.Desktop.Views.Controls.TimelineControl"
+             x:DataType="editor:TimelineEditorViewModel">
+    
+    <Grid RowDefinitions="Auto, *">
+        
+        <Border Grid.Row="0" Background="#333" Padding="10" BorderBrush="#555" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="Zoom:" VerticalAlignment="Center" Foreground="White"/>
+                <Slider Width="200" 
+                        Minimum="10" Maximum="200" 
+                        Value="{Binding PixelsPerSecond}"
+                        VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding PixelsPerSecond, StringFormat='{}{0:F0} px/sec'}" 
+                           Foreground="#AAA" VerticalAlignment="Center" Width="80"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" Background="#1E1E1E">
+            <Grid ColumnDefinitions="150, Auto"> <ItemsControl Grid.Column="0" ItemsSource="{Binding Tracks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Height="50" BorderBrush="#333" BorderThickness="0,0,1,1" Background="#252526">
+                                <TextBlock Text="{Binding Name}" 
+                                           VerticalAlignment="Center" 
+                                           Margin="10,0" 
+                                           Foreground="#CCC" FontWeight="Bold"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid Grid.Column="1" Width="{Binding TotalWidthPixels}">
+                    
+                    <ItemsControl ItemsSource="{Binding Tracks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Height="50" BorderBrush="#333" BorderThickness="0,0,0,1">
+                                    
+                                    <ItemsControl ItemsSource="{Binding Events}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Canvas.Left="{Binding XPixels}"
+                                                        Canvas.Top="5"
+                                                        Width="{Binding WidthPixels}"
+                                                        Height="40"
+                                                        Background="{Binding BackgroundColor}"
+                                                        CornerRadius="4"
+                                                        BorderBrush="White"
+                                                        BorderThickness="1">
+                                                    
+                                                    <ToolTip.Tip>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding AssetName}"/>
+                                                            <TextBlock Text="{Binding Model.Time, StringFormat='Time: {0}s'}"/>
+                                                        </StackPanel>
+                                                    </ToolTip.Tip>
+                                                    
+                                                    <TextBlock Text="{Binding AssetName}" 
+                                                               Foreground="White" 
+                                                               VerticalAlignment="Center" 
+                                                               HorizontalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               FontSize="10"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    
+                    <Rectangle Width="2" HorizontalAlignment="Left" Fill="Red" Height="1000" Opacity="0.5"/>
+                    
+                </Grid>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

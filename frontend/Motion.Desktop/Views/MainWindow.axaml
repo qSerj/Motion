@@ -4,7 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:models="using:Motion.Desktop.Models" 
-        xmlns:conv="using:Avalonia.Data.Converters" 
+        xmlns:conv="using:Avalonia.Data.Converters"
+        xmlns:controls="clr-namespace:Motion.Desktop.Views.Controls"
         mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
         x:Class="Motion.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -44,7 +45,7 @@
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto, *, Auto">
+    <Grid RowDefinitions="Auto, *, Auto, Auto">
 
         <Border Grid.Row="0" Background="#252526" Padding="15" BoxShadow="0 4 10 0 #40000000">
             <Grid ColumnDefinitions="Auto, *, Auto">
@@ -144,6 +145,9 @@
                 <TextBlock Text="{Binding CurrentState}" Foreground="#555" FontSize="10" 
                            HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
+        </Border>
+        
+        <Border Grid.Row="3" Height="200"> <controls:TimelineControl DataContext="{Binding Editor}"/>
         </Border>
 
     </Grid>

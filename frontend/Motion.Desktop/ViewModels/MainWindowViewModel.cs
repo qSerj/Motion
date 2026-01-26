@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Motion.Desktop.Models; // Нужно для обновления UI из другого потока
 using Motion.Desktop.Services;
+using Motion.Desktop.ViewModels.Editor;
 using NetMQ;
 using NetMQ.Sockets;
 
@@ -27,7 +28,9 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private IBrush _statusColor = Brushes.White;
         [ObservableProperty] private string _buttonText = "PAUSE";
         [ObservableProperty] private string _currentState = "IDLE";
-
+        
+        public TimelineEditorViewModel Editor { get; } = new();
+        
         public ObservableCollection<OverlayItem> ActiveOverlays { get; } = new();
         
         private readonly MtpFileService _mtpService = new MtpFileService();

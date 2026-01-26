@@ -1,11 +1,6 @@
-\
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Motion.Desktop.Models.Mtp;
 using Motion.Desktop.Services;
 using Xunit;
