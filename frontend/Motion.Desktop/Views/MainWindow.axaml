@@ -88,6 +88,13 @@
                                 <Style Selector="ContentPresenter" x:DataType="models:OverlayItem">
                                     <Setter Property="Canvas.Left" Value="{Binding X_Pixels}"/>
                                     <Setter Property="Canvas.Top" Value="{Binding Y_Pixels}"/>
+                                    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+                                    <Setter Property="RenderTransform">
+                                        <TransformGroup>
+                                            <RotateTransform Angle="{Binding Rotation}"/>
+                                            <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                        </TransformGroup>
+                                    </Setter>
                                 </Style>
                             </ItemsControl.Styles>
 
