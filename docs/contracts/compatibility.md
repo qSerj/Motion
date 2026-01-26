@@ -1,14 +1,14 @@
-# Compatibility & versioning
+# Совместимость и версионирование
 
-## Principles
-- Prefer backward-compatible, additive changes.
-- Treat `.mtp v2` and IPC schemas as contracts.
+## Принципы
+- Предпочитать обратно совместимые, аддитивные изменения.
+- Рассматривать `.mtp v2` и IPC-схемы как контракты.
 
-## When a breaking change is unavoidable
-1) Document it here (date, reason, migration notes).
-2) Bump version fields in the relevant contract (e.g., manifest version).
-3) Update backend and frontend in the same PR.
-4) Add regression/contract tests that prevent accidental drift.
+## Когда ломающего изменения не избежать
+1) Задокументировать здесь (дата, причина, заметки по миграции).
+2) Поднять версию в соответствующем контракте (например, версия manifest).
+3) Обновить backend и frontend в одном PR.
+4) Добавить регрессионные/контрактные тесты, предотвращающие случайный дрейф.
 
-## Change log
-(append entries here)
+## Журнал изменений
+(добавляйте записи сюда)

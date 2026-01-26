@@ -1,17 +1,17 @@
-# Roadmap (living document)
+# Дорожная карта (живой документ)
 
-## Now (stabilization)
-- Make IPC protocol explicit and tested (docs/ipc.md + tests).
-- Stabilize `.mtp v2` reading/writing with fixtures and round-trip tests.
-- Extract pure logic from realtime loops to enable deterministic tests:
-  - overlay scheduling
-  - scoring functions
-  - timeline parsing/validation
+## Сейчас (стабилизация)
+- Явно описать и покрыть тестами IPC-протокол (docs/ipc.md + tests).
+- Стабилизировать чтение/запись `.mtp v2` с фикстурами и round-trip тестами.
+- Выделить чистую логику из realtime-циклов для детерминированных тестов:
+  - расписание оверлеев
+  - функции скоринга
+  - парсинг/валидация таймлайна
 
-## Next (editor & content pipeline)
-- Tools for creating/editing levels (validate manifest/timeline, preview overlays).
-- Better error messages for malformed `.mtp` files.
+## Далее (редактор и контентный пайплайн)
+- Инструменты для создания/редактирования уровней (валидация manifest/timeline, предпросмотр оверлеев).
+- Более понятные ошибки для некорректных `.mtp` файлов.
 
-## Later (optional backend service)
-- Consider moving from ZMQ to HTTP/WebSocket only if needed.
-- If backend becomes network-facing, introduce OpenAPI + auth only when necessary.
+## Позже (опциональный backend-сервис)
+- Рассмотреть переход с ZMQ на HTTP/WebSocket только при необходимости.
+- Если backend станет сетевым сервисом, вводить OpenAPI + auth только когда это нужно.

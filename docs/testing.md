@@ -1,29 +1,29 @@
-# Testing strategy
+# Стратегия тестирования
 
-Goal: catch regressions quickly and make AI-driven development safe.
+Цель: быстро ловить регрессии и делать безопасной разработку с участием AI.
 
-## Priorities
-1) **Format contract** tests (.mtp v2)
-2) **Timeline semantics** tests (overlay activation, ordering)
-3) **View-model** tests (UI logic, command enable/disable)
-4) Optional **end-to-end** smoke tests
+## Приоритеты
+1) Тесты **контрактов формата** (.mtp v2)
+2) Тесты **семантики таймлайна** (активация оверлеев, порядок)
+3) Тесты **view-model** (логика UI, включение/выключение команд)
+4) Опциональные **end-to-end** smoke-тесты
 
 ## Backend (pytest)
-- Unit tests for pure functions (geometry, scheduling, parsing).
-- Fixture `.mtp` files for digitizer output validation.
-- No webcam dependency in unit tests.
+- Юнит-тесты для чистых функций (геометрия, расписание, парсинг).
+- Фикстуры `.mtp` для проверки результата digitizer.
+- Никакой зависимости от веб-камеры в юнит-тестах.
 
-Suggested commands:
+Рекомендуемые команды:
 - `python -m pytest`
 
 ## Frontend (.NET)
-- Unit tests for models/view-models and MTP parsing.
-- Mock IPC client; do not require backend to be running.
+- Юнит-тесты моделей/view-model и парсинга MTP.
+- Мок IPC-клиента; backend не должен быть запущен.
 
-Suggested commands:
+Рекомендуемые команды:
 - `dotnet test`
 
-## Contract fixtures
-Keep small, representative fixtures under:
+## Фикстуры контрактов
+Хранить небольшие репрезентативные фикстуры в:
 - `tests/fixtures/` (backend)
 - `frontend/Motion.Desktop.Tests/Fixtures/` (frontend)

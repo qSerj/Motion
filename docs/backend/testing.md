@@ -1,23 +1,23 @@
-# Backend testing
+# Тестирование backend
 
-## Framework
+## Фреймворк
 - pytest
 
-## What to test first
-1) geometry helpers (`core/geometry.py`)
-2) overlay activation rule (time windows)
-3) command schema validation (JSON shapes)
-4) digitizer output structure:
-   - `.mtp` is a zip
-   - contains `manifest.json`, `patterns.json`, `timeline.json` (as per spec)
-   - JSON is valid and required fields exist
+## Что тестировать в первую очередь
+1) геометрические хелперы (`core/geometry.py`)
+2) правило активации оверлеев (временные окна)
+3) валидация схемы команд (формы JSON)
+4) структура результата digitizer:
+   - `.mtp` — это zip
+   - содержит `manifest.json`, `patterns.json`, `timeline.json` (по спецификации)
+   - JSON валиден и требуемые поля присутствуют
 
-## Suggested layout
+## Рекомендуемая структура
 - backend/tests/test_geometry.py
 - backend/tests/test_overlay_activation.py
 - backend/tests/test_ipc_contract.py
 - backend/tests/test_mtp_output.py
 
-## Notes
-- Do not open a webcam in unit tests.
-- Use static frames (numpy arrays) where needed.
+## Примечания
+- Не открывать веб-камеру в юнит-тестах.
+- При необходимости использовать статические кадры (numpy arrays).

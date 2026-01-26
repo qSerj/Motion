@@ -1,11 +1,11 @@
-# Frontend design notes
+# Заметки по дизайну frontend
 
-## Current structure
-- ViewModels/MainWindowViewModel.cs: orchestrates UI state, IPC commands, level loading
-- Services/MtpFileService.cs: reads `.mtp` zip, extracts manifest/assets
-- Models/Mtp/: DTOs for manifest/timeline
+## Текущая структура
+- ViewModels/MainWindowViewModel.cs: оркестрация состояния UI, IPC-команды, загрузка уровней
+- Services/MtpFileService.cs: читает `.mtp` zip, извлекает manifest/ассеты
+- Models/Mtp/: DTO для manifest/timeline
 - Views/: Avalonia UI
 
-## Stability goals
-- All backend/IPC interactions should go through one service interface for testability.
-- ViewModel should be testable without Avalonia rendering.
+## Цели стабильности
+- Все взаимодействия с backend/IPC должны проходить через один интерфейс сервиса для тестируемости.
+- ViewModel должна тестироваться без рендера Avalonia.

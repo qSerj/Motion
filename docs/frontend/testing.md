@@ -1,32 +1,32 @@
-# Frontend testing
+# Тестирование frontend
 
-## Framework
-Use the test framework already standard for the solution (recommended: xUnit).
+## Фреймворк
+Используйте тестовый фреймворк, уже принятый в решении (рекомендуется: xUnit).
 
-## What to test first
-1) `.mtp` parsing:
-   - manifest deserialization
-   - timeline deserialization
-   - asset extraction logic (happy path + missing asset)
-2) ViewModel logic:
-   - status text updates
-   - commands enable/disable based on state
-   - error handling does not crash UI thread
+## Что тестировать в первую очередь
+1) парсинг `.mtp`:
+   - десериализация manifest
+   - десериализация timeline
+   - логика извлечения ассетов (happy path + отсутствующий asset)
+2) логика ViewModel:
+   - обновление текста статуса
+   - включение/выключение команд в зависимости от состояния
+   - обработка ошибок не должна падать в UI-потоке
 
-## Avoid
-- Tests that require a running backend by default.
-- Heavy UI tests; keep smoke tests minimal if added.
+## Избегать
+- Тестов, которые требуют запущенный backend по умолчанию.
+- Тяжёлых UI-тестов; smoke-тесты держать минимальными, если добавляются.
 
-## Run
+## Запуск
 
-From repo root:
+Из корня репозитория:
 
 ```bash
 cd frontend/Motion.Desktop.Tests
 dotnet test
 ```
 
-Or:
+Или:
 
 ```bash
 dotnet test frontend/Motion.Desktop.Tests/Motion.Desktop.Tests.csproj
