@@ -1,18 +1,18 @@
-# Documentation index
+# Индекс документации
 
-## Core specs (contracts)
-- MTP format (level file contract): ./MTP_FORMAT_v2.md
-- System technical specification: ./TECH_SPEC.md
-- IPC protocol (ZeroMQ): ./ipc.md
-- Compatibility & versioning: ./contracts/compatibility.md
+## Основные спецификации (контракты)
+- Формат MTP (контракт файла уровня): ./MTP_FORMAT_v2.md
+- Техническая спецификация системы: ./TECH_SPEC.md
+- Протокол IPC (ZeroMQ): ./ipc.md
+- Совместимость и версионирование: ./contracts/compatibility.md
 
-## Architecture & roadmap
-- Architecture overview: ./architecture.md
-- Roadmap: ./roadmap.md
-- Testing strategy: ./testing.md
+## Архитектура и дорожная карта
+- Обзор архитектуры: ./architecture.md
+- Дорожная карта: ./roadmap.md
+- Стратегия тестирования: ./testing.md
 
-## Component notes
-- Backend design: ./backend/design.md
-- Backend testing: ./backend/testing.md
-- Frontend design: ./frontend/design.md
-- Frontend testing: ./frontend/testing.md
+## Заметки по компонентам
+- Дизайн backend: ./backend/design.md
+- Тестирование backend: ./backend/testing.md
+- Дизайн frontend: ./frontend/design.md
+- Тестирование frontend: ./frontend/testing.md

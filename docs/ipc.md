@@ -1,60 +1,60 @@
-# IPC protocol (ZeroMQ)
+# Протокол IPC (ZeroMQ)
 
-This document defines the **stable contract** between backend and frontend.
+Этот документ определяет **стабильный контракт** между backend и frontend.
 
-## Ports
-Default ports in backend/core/game_engine.py:
-- PUB (video/meta stream): **tcp://127.0.0.1:5555**
-- REP (commands): **tcp://127.0.0.1:5556**
+## Порты
+Порты по умолчанию в backend/core/game_engine.py:
+- PUB (поток видео/метаданных): **tcp://127.0.0.1:5555**
+- REP (команды): **tcp://127.0.0.1:5556**
 
-## PUB stream: frames + metadata
-### Topic
-- First frame: `b"video"`
+## PUB-поток: кадры + метаданные
+### Топик
+- Первый фрейм: `b"video"`
 
-### Multipart message
-Backend sends multipart frames:
+### Multipart сообщение
+Backend отправляет multipart-фреймы:
 
 1. `topic` (bytes) — `b"video"`
 2. `meta` (UTF-8 JSON bytes)
 3. `ref_frame_jpg` (bytes) — JPEG
 4. `user_frame_jpg` (bytes) — JPEG
 
-### meta JSON schema (current)
-Fields observed in backend/core/game_engine.py `_send_frame()`:
+### Схема meta JSON (текущая)
+Поля, наблюдаемые в backend/core/game_engine.py `_send_frame()`:
 
-- `state`: string (GameState enum value)
+- `state`: string (значение enum GameState)
 - `score`: number
-- `time`: number (seconds)
-- `status`: string (human readable status)
-- `progress`: number (digitization progress percent)
-- `overlays`: array of overlay events active at `time`
+- `time`: number (секунды)
+- `status`: string (человекочитаемый статус)
+- `progress`: number (процент оцифровки)
+- `overlays`: массив overlay-событий, активных на момент `time`
 
-Overlay activation rule (current backend):
-- event is active when: `event.time <= current_time < event.time + event.duration`
+Правило активации оверлеев (текущий backend):
+- событие активно, когда: `event.time <= current_time < event.time + event.duration`
 
-## REP commands: control plane
-Frontend sends JSON to backend REP socket.
+## REP-команды: канал управления
+Frontend отправляет JSON в REP-сокет backend.
 
-### Envelope
-Request: JSON object with at least:
+### Конверт
+Запрос: JSON-объект как минимум с:
 - `type`: string
 
-Reply:
-- `{ "status": "ok" }` on success
-- `{ "status": "error", "msg": "..." }` on failure
+Ответ:
+- `{ "status": "ok" }` при успехе
+- `{ "status": "error", "msg": "..." }` при ошибке
 
-### Known command types (current)
-From backend/core/game_engine.py `_handle_commands()`:
+### Известные типы команд (текущие)
+Из backend/core/game_engine.py `_handle_commands()`:
 
-- `load`: load a level (expects additional fields — see code/docs/TECH_SPEC.md)
-- `digitize`: start digitization in a background thread
+- `load`: загрузить уровень (ожидаются дополнительные поля — см. code/docs/TECH_SPEC.md)
+- `digitize`: запустить оцифровку в фоне
   - `source_path`: string
   - `output_path`: string
 - `pause`
 - `resume`
 - `restart`
-- `stop` (terminates loop)
+- `stop` (завершает цикл)
 
-## Compatibility rules
-- Additive changes are preferred (new fields, new command types).
-- Breaking changes must be documented in docs/contracts/compatibility.md and coordinated across backend+frontend.
+## Правила совместимости
+- Предпочтительны аддитивные изменения (новые поля, новые типы команд).
+- Ломающие изменения нужно документировать в docs/contracts/compatibility.md и согласовывать между backend+frontend.

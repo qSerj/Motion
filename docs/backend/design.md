@@ -1,16 +1,16 @@
-# Backend design notes
+# Заметки по дизайну backend
 
-## Modules
-- core/game_engine.py: main realtime loop, state machine, IPC, overlay filtering
-- core/pose_engine.py: MediaPipe pose extraction
-- core/geometry.py: math helpers (angles etc.)
-- core/digitizer.py: creates `.mtp` levels from video
-- processors/: video processing helpers
-- tools/: debugging / recording utilities
+## Модули
+- core/game_engine.py: основной realtime-цикл, машина состояний, IPC, фильтрация оверлеев
+- core/pose_engine.py: извлечение позы MediaPipe
+- core/geometry.py: математические помощники (углы и т.д.)
+- core/digitizer.py: создаёт уровни `.mtp` из видео
+- processors/: хелперы обработки видео
+- tools/: утилиты для отладки / записи
 
-## What to refactor (carefully)
-- Extract pure logic from GameEngine loop:
-  - overlay activation
-  - command validation
-  - scoring calculation
-This makes tests easy and reduces regressions.
+## Что аккуратно рефакторить
+- Выделить чистую логику из цикла GameEngine:
+  - активация оверлеев
+  - валидация команд
+  - расчёт скоринга
+Это упрощает тесты и снижает риск регрессий.

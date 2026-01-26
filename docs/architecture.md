@@ -1,29 +1,29 @@
-# Architecture
+# Архитектура
 
-## High level
-Motion Trainer currently consists of:
+## На высоком уровне
+Motion Trainer сейчас состоит из:
 
-- **Backend (Python)**: computer-vision + game engine.
-  - Captures user pose (webcam), evaluates against reference video/level.
-  - Publishes frames + metadata (score, time, overlays) via ZeroMQ PUB.
-  - Accepts commands via ZeroMQ REP (load, pause, resume, restart, stop, digitize).
+- **Backend (Python)**: компьютерное зрение + игровой движок.
+  - Захватывает позу пользователя (webcam), сравнивает с референсным видео/уровнем.
+  - Публикует кадры и метаданные (очки, время, оверлеи) через ZeroMQ PUB.
+  - Принимает команды через ZeroMQ REP (load, pause, resume, restart, stop, digitize).
 
-- **Frontend (C# Avalonia)**: desktop UI.
-  - Loads `.mtp v2` levels (zip with manifest + patterns + assets).
-  - Renders overlays on top of video/canvas.
-  - Can send control commands to backend and display backend stream.
+- **Frontend (C# Avalonia)**: настольный UI.
+  - Загружает уровни `.mtp v2` (zip с manifest + patterns + assets).
+  - Рендерит оверлеи поверх видео/канваса.
+  - Может отправлять команды управления в backend и отображать поток backend.
 
-## Source of truth
-- `.mtp v2` is the format contract (docs/MTP_FORMAT_v2.md).
-- IPC message shapes are a contract (docs/ipc.md).
-- Behavioral semantics live in docs/TECH_SPEC.md.
+## Источник истины
+- `.mtp v2` — контракт формата (docs/MTP_FORMAT_v2.md).
+- Формат IPC-сообщений — контракт (docs/ipc.md).
+- Семантика поведения описана в docs/TECH_SPEC.md.
 
-## Data flow
-1) Level is created (digitizer) -> `.mtp` archive.
-2) Frontend loads `.mtp` and prepares timeline + assets.
-3) Backend can be run to stream video/meta; frontend subscribes and renders.
-4) User actions in UI send commands to backend (REQ/REP).
+## Поток данных
+1) Уровень создаётся (digitizer) → архив `.mtp`.
+2) Frontend загружает `.mtp` и готовит таймлайн + ассеты.
+3) Backend может быть запущен для стриминга видео/метаданных; frontend подписывается и рендерит.
+4) Действия пользователя в UI отправляют команды в backend (REQ/REP).
 
-## Key risks
-- Silent drift between docs and implementation (fix by tests + docs discipline).
-- Tight coupling to real-time / webcam in logic (fix by extracting pure logic and testing it).
+## Ключевые риски
+- Тихий дрейф между документацией и реализацией (исправляется тестами + дисциплиной в документах).
+- Жёсткая зависимость логики от real-time / webcam (исправляется выделением чистой логики и её тестированием).
