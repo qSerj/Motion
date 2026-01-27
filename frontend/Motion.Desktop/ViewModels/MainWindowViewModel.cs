@@ -38,6 +38,8 @@ namespace Motion.Desktop.ViewModels
         public MainWindowViewModel()
         {
             Task.Run(ReceiveVideoFrames);
+            
+            _ = SyncWithServerAsync();
         }
 
         [RelayCommand]
@@ -55,9 +57,10 @@ namespace Motion.Desktop.ViewModels
             }
         }
 
-        private void SendCommand(object cmd)
+// Изменили void на Task<string?>
+        private async Task<string?> SendCommandAsync(object cmd)
         {
-            Task.Run(() =>
+            return await Task.Run(() =>
             {
                 try
                 {
@@ -66,13 +69,84 @@ namespace Motion.Desktop.ViewModels
 
                     string json = JsonSerializer.Serialize(cmd);
                     socket.SendFrame(json);
-                    socket.ReceiveFrameString();
+                    
+                    // Ждем ответа (с таймаутом, чтобы не зависнуть намертво, если сервер лежит)
+                    if (socket.TryReceiveFrameString(TimeSpan.FromSeconds(1), out string? response))
+                    {
+                        return response;
+                    }
+                    return null;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore command send failures for now.
+                    Console.WriteLine($"CMD Error: {ex.Message}");
+                    return null;
                 }
             });
+        }
+
+        // Вспомогательный метод для старых вызовов (fire and forget)
+        private void SendCommand(object cmd)
+        {
+            _ = SendCommandAsync(cmd);
+        }
+        
+        public async Task SyncWithServerAsync()
+        {
+            try
+            {
+                // 1. Спрашиваем у сервера: "Как дела?"
+                var responseJson = await SendCommandAsync(new { type = "get_state" });
+                
+                if (string.IsNullOrEmpty(responseJson)) return;
+
+                using var doc = JsonDocument.Parse(responseJson);
+                var root = doc.RootElement;
+                
+                if (!root.TryGetProperty("status", out var statusProp) || statusProp.GetString() != "ok") 
+                    return;
+
+                // 2. Восстанавливаем состояние кнопки (PAUSED -> RESUME)
+                if (root.TryGetProperty("state", out var stateProp))
+                {
+                    string state = stateProp.GetString() ?? "IDLE";
+                    CurrentState = state;
+                    
+                    // Если сервер на паузе, кнопка должна предлагать "RESUME"
+                    if (state == "PAUSED") ButtonText = "RESUME";
+                    else if (state == "PLAYING") ButtonText = "PAUSE";
+                    else ButtonText = "PAUSE"; 
+                }
+
+                // 3. Восстанавливаем уровень (если был загружен)
+                if (root.TryGetProperty("level", out var levelProp) && levelProp.ValueKind == JsonValueKind.Object)
+                {
+                    string? timelinePath = levelProp.GetProperty("timeline_path").GetString();
+                    string? videoPath = levelProp.GetProperty("video_path").GetString();
+
+                    // Если есть таймлайн и он не пустой - загружаем его в Редактор
+                    if (!string.IsNullOrEmpty(timelinePath) && File.Exists(timelinePath))
+                    {
+                        var timelineData = await _mtpService.ReadTimelineAsync(timelinePath);
+                        if (timelineData != null)
+                        {
+                            // Нам нужно знать длительность. 
+                            // Если у нас нет манифеста, попробуем грубо оценить или взять дефолт.
+                            // В идеале сервер должен вернуть и duration, но пока возьмем 300с или из EditorViewModel
+                            // TODO: В будущем добавить Duration в get_state
+                            
+                            // Пока просто загрузим данные, длительность обновится, когда придет первый кадр видео
+                            Editor.LoadData(timelineData, 300); 
+                            StatusText = "Session Restored";
+                            IsWaiting = false;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Sync Error: {ex.Message}");
+            }
         }
 
         public async Task LoadLevelAsync(string mtpFilePath)

@@ -1,6 +1,7 @@
 using System;
 using Motion.Desktop.Models.Mtp;
 using System.Collections.ObjectModel;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Motion.Desktop.ViewModels.Editor
@@ -29,8 +30,10 @@ namespace Motion.Desktop.ViewModels.Editor
 
         public TimelineEditorViewModel()
         {
-            // Для теста создадим фейковые данные, чтобы сразу увидеть результат
-            LoadDesignData();
+            if (Design.IsDesignMode)
+            {
+                LoadDesignData();
+            }
         }
 
         // Метод, который вызывается, когда юзер двигает слайдер зума

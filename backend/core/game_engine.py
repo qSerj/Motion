@@ -57,6 +57,7 @@ class GameEngine:
         self.audio_player = None
         self.pattern_map = {}
         self.timeline = []
+        self.current_level_info = {}
 
         # Параметры
         self.score = 0
@@ -108,7 +109,14 @@ class GameEngine:
             ctype = command.get('type')
             response = {"status": "ok"}
 
-            if ctype == 'load':
+            if ctype == 'get_state':
+                response = {
+                    "status": "ok",
+                    "state": self.state.value,
+                    "level": self.current_level_info
+                }
+
+            elif ctype == 'load':
                 self._load_level(command)
 
             elif ctype == 'digitize':
@@ -206,6 +214,12 @@ class GameEngine:
     # ------------------------
 
     def _load_level(self, cmd):
+        self.current_level_info = {
+            "video_path": cmd.get('video_path'),
+            "timeline_path": cmd.get('timeline_path'),
+            "json_path": cmd.get('json_path')
+        }
+
         video_path = cmd.get('video_path')
         json_path = cmd.get('json_path')
 
