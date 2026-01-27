@@ -13,7 +13,7 @@ namespace Motion.Desktop.Models.Mtp
     public class MtpTrack
     {
         [JsonPropertyName("id")]
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [JsonPropertyName("events")]
         public List<MtpEvent> Events { get; set; } = new();
@@ -22,7 +22,7 @@ namespace Motion.Desktop.Models.Mtp
     public class MtpEvent
     {
         [JsonPropertyName("type")]
-        public string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
 
         [JsonPropertyName("time")]
         public double Time { get; set; }
@@ -31,7 +31,7 @@ namespace Motion.Desktop.Models.Mtp
         public double Duration { get; set; }
 
         [JsonPropertyName("asset")]
-        public string Asset { get; set; }
+        public string Asset { get; set; } = string.Empty;
 
         [JsonPropertyName("props")]
         public JsonElement Props { get; set; }

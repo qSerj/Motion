@@ -16,7 +16,7 @@ public class GameData
     public double Time { get; set; }
         
     [JsonPropertyName("status")]
-    public string Status { get; set; }
+    public string Status { get; set; } = string.Empty;
     
     [JsonPropertyName("overlays")]
     public JsonElement Overlays { get; set; }

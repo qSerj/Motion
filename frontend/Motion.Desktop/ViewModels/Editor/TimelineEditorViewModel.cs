@@ -22,7 +22,7 @@ namespace Motion.Desktop.ViewModels.Editor
         [ObservableProperty] [NotifyPropertyChangedFor(nameof(CurrentTimePixels))]
         private double _currentTime;
         
-        public double CurrentTimePixels => CurrentTime * _pixelsPerSecond;
+        public double CurrentTimePixels => CurrentTime * PixelsPerSecond;
         
         // Коллекция рисок для биндинга
         public ObservableCollection<TimelineTick> Ticks { get; } = new();

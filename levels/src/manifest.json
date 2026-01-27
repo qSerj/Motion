@@ -1,0 +1,10 @@
+{
+  "version": "2.0",
+  "title": "test",
+  "duration": 9.5,
+  "files": {
+    "video": "video.mp4",
+    "patterns": "patterns.json",
+    "timeline": "timeline.json"
+  }
+}

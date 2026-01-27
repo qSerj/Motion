@@ -18,12 +18,12 @@ namespace Motion.Desktop.Models.Mtp
         public Dictionary<string, string> Files { get; set; } = new();
 
         [JsonIgnore]
-        public string VideoPath => Files.GetValueOrDefault("video");
+        public string VideoPath => Files.GetValueOrDefault("video") ?? string.Empty;
 
         [JsonIgnore]
-        public string PatternsPath => Files.GetValueOrDefault("patterns");
+        public string PatternsPath => Files.GetValueOrDefault("patterns") ?? string.Empty;
 
         [JsonIgnore]
-        public string TimelinePath => Files.GetValueOrDefault("timeline");
+        public string TimelinePath => Files.GetValueOrDefault("timeline") ?? string.Empty;
     }
 }
