@@ -144,6 +144,16 @@ namespace Motion.Desktop.ViewModels
             await Task.CompletedTask;
         }
 
+        public void SeekTo(double timeInSeconds)
+        {
+            var cmd = new
+            {
+                type = "seek",
+                time = timeInSeconds
+            };
+            SendCommand(cmd);
+        }
+
         private void ReceiveVideoFrames()
         {
             // Создаем Subscriber сокет (как в радиоприемнике)

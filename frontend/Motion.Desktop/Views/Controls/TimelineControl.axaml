@@ -35,7 +35,12 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <Grid Grid.Column="1" Width="{Binding TotalWidthPixels}" RowDefinitions="25, *">
+                <Grid Grid.Column="1"
+                      Width="{Binding TotalWidthPixels}"
+                      RowDefinitions="25, *"
+                      Name="TimelineArea"
+                      Background="Transparent"
+                      PointerPressed="OnTimelinePointerPressed">
     
                     <Border Grid.Row="0" Background="#2D2D30" BorderBrush="#444" BorderThickness="0,0,0,1">
                         <ItemsControl ItemsSource="{Binding Ticks}">

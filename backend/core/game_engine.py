@@ -65,6 +65,7 @@ class GameEngine:
         self.current_time = 0.0
         self.target_delay = 0.033
         self.blank_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        self.last_ref_frame = self.blank_frame
 
     def run(self):
         """Главный цикл"""
@@ -132,6 +133,43 @@ class GameEngine:
                         self.audio_player.set_pause(False)
                     self.score = 0
                     self.state = GameState.PLAYING
+            elif ctype == 'seek':
+                    target_time = command.get('time', 0.0)
+                    print(f"[Seek] Target: {target_time}s")
+                    if self.cap_ref:
+                        # 1. Сдвигаем позицию
+                        self.cap_ref.set(cv2.CAP_PROP_POS_MSEC, target_time * 1000.0)
+
+                        # 2. ВАЖНО: Сразу читаем кадр, чтобы применить seek и очистить буфер
+                        # Если этого не сделать, следующий read() может вернуть старый кадр
+                        ret, frame = self.cap_ref.read()
+
+                        if ret:
+                            # Корректируем время на то, куда РЕАЛЬНО попали (из-за ключевых кадров)
+                            real_time = self.cap_ref.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
+                            self.current_time = real_time
+
+                            self.last_ref_frame = frame
+
+                            # Синхрон аудио
+                            if self.audio_player:
+                                self.audio_player.seek(real_time)
+
+                            # 3. Если мы на ПАУЗЕ, нужно принудительно обновить картинку в UI
+                            if self.state == GameState.PAUSED or self.state == GameState.IDLE:
+                                # Берем текущий кадр с вебки (чтобы юзер не замер)
+                                _, user_frame = self.cap_user.read()
+                                if user_frame is None: user_frame = self.blank_frame
+                                user_frame = cv2.flip(user_frame, 1)
+
+                                # Отправляем обновление
+                                self._send_frame(frame, user_frame, "SEEK")
+                        else:
+                            print("[Seek] Failed to read frame at target time")
+
+                    # Если референсного видео нет, просто двигаем время
+                    else:
+                        self.current_time = target_time
             elif ctype == 'stop':
                 raise KeyboardInterrupt
 
@@ -216,6 +254,9 @@ class GameEngine:
         if not ret_ref:
             self.state = GameState.FINISHED
             return
+
+        self.last_ref_frame = frame_ref
+
         if not ret_user:
             frame_user = self.blank_frame
 
@@ -248,7 +289,15 @@ class GameEngine:
         self._send_frame(frame_ref, frame_user, status_text)
 
     def _loop_paused(self):
-        self._send_frame(self.blank_frame, self.blank_frame, "PAUSED")
+        # 1. Читаем камеру (чтобы пользователь оставался "живым")
+        ret, user_frame = self.cap_user.read()
+        if not ret:
+            user_frame = self.blank_frame
+        else:
+            user_frame = cv2.flip(user_frame, 1)
+
+        # 2. Шлем: Статичный кадр видео + Живого пользователя
+        self._send_frame(self.last_ref_frame, user_frame, "PAUSED")
 
     def _loop_finished(self):
         self._send_frame(self.blank_frame, self.blank_frame, "LEVEL COMPLETE")
