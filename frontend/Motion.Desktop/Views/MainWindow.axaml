@@ -86,7 +86,7 @@
                         <ItemsControl ItemsSource="{Binding ActiveOverlays}" Width="1000" Height="1000">
                             
                             <ItemsControl.Styles>
-                                <Style Selector="ContentPresenter" x:DataType="models:OverlayItem">
+                                <Style Selector="ContentPresenter" x:CompileBindings="False" >
                                     <Setter Property="Canvas.Left" Value="{Binding X_Pixels}"/>
                                     <Setter Property="Canvas.Top" Value="{Binding Y_Pixels}"/>
                                     <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
@@ -138,16 +138,18 @@
             </Grid>
         </Grid>
 
-        <Border Grid.Row="2" Background="#252526" Padding="15">
-            <Grid>
-                <Button Classes="dark" Command="{Binding TogglePauseCommand}" 
-                        Content="{Binding ButtonText}" HorizontalAlignment="Center" Width="150"/>
-                <TextBlock Text="{Binding CurrentState}" Foreground="#555" FontSize="10" 
-                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
+        <Border Grid.Row="2" Background="#252526" BorderBrush="#444" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="Auto, *">
         
-        <Border Grid.Row="3" Height="200"> <controls:TimelineControl DataContext="{Binding Editor}"/>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="10">
+                    <Button Classes="dark" 
+                            Command="{Binding TogglePauseCommand}" 
+                            Content="{Binding ButtonText}" 
+                            Width="80" Height="30" FontSize="12"/>
+                </StackPanel>
+
+                <controls:TimelineControl Grid.Column="1" DataContext="{Binding Editor}"/>
+            </Grid>
         </Border>
 
     </Grid>

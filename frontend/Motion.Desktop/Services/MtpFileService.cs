@@ -41,5 +41,20 @@ namespace Motion.Desktop.Services
 
             return tempFile;
         }
+
+        public async Task<MtpTimeline?> ReadTimelineAsync(string timelinePath)
+        {
+            if (!File.Exists(timelinePath)) return null;
+
+            using FileStream stream = File.OpenRead(timelinePath);
+            try
+            {
+                return await JsonSerializer.DeserializeAsync<MtpTimeline>(stream);
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }

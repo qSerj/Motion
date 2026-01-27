@@ -1,3 +1,4 @@
+using System;
 using Motion.Desktop.Models.Mtp;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -18,6 +19,14 @@ namespace Motion.Desktop.ViewModels.Editor
 
         public ObservableCollection<TimelineTrackViewModel> Tracks { get; } = new();
 
+        [ObservableProperty] [NotifyPropertyChangedFor(nameof(CurrentTimePixels))]
+        private double _currentTime;
+        
+        public double CurrentTimePixels => CurrentTime * _pixelsPerSecond;
+        
+        // Коллекция рисок для биндинга
+        public ObservableCollection<TimelineTick> Ticks { get; } = new();
+
         public TimelineEditorViewModel()
         {
             // Для теста создадим фейковые данные, чтобы сразу увидеть результат
@@ -32,13 +41,34 @@ namespace Motion.Desktop.ViewModels.Editor
 
         private void RefreshLayout()
         {
-            // 1. Обновляем общую ширину контейнера
             TotalWidthPixels = _durationSeconds * PixelsPerSecond;
+            OnPropertyChanged(nameof(CurrentTimePixels));
 
-            // 2. Просим все треки пересчитать свои события
             foreach (var track in Tracks)
             {
                 track.UpdateScale(PixelsPerSecond);
+            }
+
+            RegenerateTicks();
+        }
+
+        private void RegenerateTicks()
+        {
+            Ticks.Clear();
+
+            int stepSeconds = 1;
+            
+            if (PixelsPerSecond < 20) stepSeconds = 5;
+
+            for (int sec = 0; sec <= _durationSeconds; sec += stepSeconds)
+            {
+                var tick = new TimelineTick()
+                {
+                    XPixels = sec * PixelsPerSecond,
+                    Text = TimeSpan.FromSeconds(sec).ToString(@"mm\:ss"),
+                    IsMajor = true
+                };
+                Ticks.Add(tick);
             }
         }
 

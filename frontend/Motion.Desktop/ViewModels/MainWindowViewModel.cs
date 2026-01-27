@@ -100,6 +100,15 @@ namespace Motion.Desktop.ViewModels
 
                 string? timelinePath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.TimelinePath);
 
+                if (timelinePath != null)
+                {
+                    var timelineModel = await _mtpService.ReadTimelineAsync(timelinePath);
+                    if (timelineModel != null)
+                    {
+                        Editor.LoadData(timelineModel, manifest.Duration);
+                    }
+                }
+
                 var cmd = new 
                 { 
                     type = "load", 
@@ -216,6 +225,8 @@ namespace Motion.Desktop.ViewModels
                                         }
                                     }
                                 }
+                                
+                                Editor.CurrentTime = data.Time;
                             }
                         });
                     }
