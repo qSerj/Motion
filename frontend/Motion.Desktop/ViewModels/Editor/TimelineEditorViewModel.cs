@@ -88,19 +88,30 @@ namespace Motion.Desktop.ViewModels.Editor
 
         private void LoadDesignData()
         {
-            _durationSeconds = 60; // 1 минута
-            
-            // Создаем тестовый трек
-            var track = new MtpTrack { Id = "Overlays" };
-            track.Events.Add(new MtpEvent { Type = "text", Time = 2.0, Duration = 5.0, Asset = "Welcome!" });
-            track.Events.Add(new MtpEvent { Type = "image", Time = 10.0, Duration = 3.0, Asset = "icon.png" });
-            track.Events.Add(new MtpEvent { Type = "text", Time = 15.0, Duration = 10.0, Asset = "Long Text" });
+            _durationSeconds = 120; // 2 минуты
 
-            var track2 = new MtpTrack { Id = "Game Logic" };
-            track2.Events.Add(new MtpEvent { Type = "zone", Time = 0.0, Duration = 60.0, Asset = "Play Area" });
+            // Трек 1: Тексты
+            var t1 = new MtpTrack { Id = "Overlays (Text)" };
+            t1.Events.Add(new MtpEvent { Type = "text", Time = 2.0, Duration = 5.0, Asset = "Warm Up" });
+            t1.Events.Add(new MtpEvent { Type = "text", Time = 10.0, Duration = 3.0, Asset = "Faster!" });
 
-            Tracks.Add(new TimelineTrackViewModel(track));
-            Tracks.Add(new TimelineTrackViewModel(track2));
+            // Трек 2: Картинки
+            var t2 = new MtpTrack { Id = "Visuals (Icons)" };
+            t2.Events.Add(new MtpEvent { Type = "image", Time = 0.5, Duration = 2.0, Asset = "logo.png" });
+            t2.Events.Add(new MtpEvent { Type = "image", Time = 15.0, Duration = 5.0, Asset = "fire.gif" });
+
+            // Трек 3: Логика
+            var t3 = new MtpTrack { Id = "Game Rules" };
+            t3.Events.Add(new MtpEvent { Type = "zone", Time = 0.0, Duration = 60.0, Asset = "Double Score" });
+
+            // Трек 4: Звук (для примера)
+            var t4 = new MtpTrack { Id = "Audio FX" };
+            t4.Events.Add(new MtpEvent { Type = "sfx", Time = 5.0, Duration = 1.0, Asset = "beep" });
+
+            Tracks.Add(new TimelineTrackViewModel(t1));
+            Tracks.Add(new TimelineTrackViewModel(t2));
+            Tracks.Add(new TimelineTrackViewModel(t3));
+            Tracks.Add(new TimelineTrackViewModel(t4));
 
             RefreshLayout();
         }
