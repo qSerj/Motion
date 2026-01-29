@@ -27,7 +27,7 @@ Backend отправляет multipart-фреймы:
 - `time`: number (секунды)
 - `status`: string (человекочитаемый статус)
 - `progress`: number (процент оцифровки)
-- `overlays`: массив overlay-событий, активных на момент `time`
+- `overlays`: массив overlay-событий, активных на момент `time` (события из `timeline.json`)
 
 Правило активации оверлеев (текущий backend):
 - событие активно, когда: `event.time <= current_time < event.time + event.duration`
@@ -43,16 +43,28 @@ Frontend отправляет JSON в REP-сокет backend.
 - `{ "status": "ok" }` при успехе
 - `{ "status": "error", "msg": "..." }` при ошибке
 
+Для команды `get_state` backend также возвращает текущее состояние и информацию об уровне:
+
+```json
+{ "status": "ok", "state": "PAUSED", "level": { "video_path": "...", "json_path": "...", "timeline_path": "..." } }
+```
+
 ### Известные типы команд (текущие)
 Из backend/core/game_engine.py `_handle_commands()`:
 
-- `load`: загрузить уровень (ожидаются дополнительные поля — см. code/docs/TECH_SPEC.md)
+- `load`: загрузить уровень
+  - `video_path`: string
+  - `json_path`: string (patterns)
+  - `timeline_path`: string (опционально)
 - `digitize`: запустить оцифровку в фоне
   - `source_path`: string
   - `output_path`: string
+- `get_state`: получить текущий `state` и данные уровня
 - `pause`
 - `resume`
 - `restart`
+- `seek`: перейти к моменту времени (секунды)
+  - `time`: number
 - `stop` (завершает цикл)
 
 ## Правила совместимости

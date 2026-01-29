@@ -14,15 +14,17 @@
 
 ```text
 level.mtp
-├── manifest.json       # Метаданные (Автор, сложность, ссылки)
-├── timeline.json       # (New!) Сценарий событий
+├── manifest.json       # Метаданные (минимальный набор полей см. ниже)
 ├── patterns.json       # Данные скелета (углы)
-├── assets/             # Медиа-ресурсы
-│   ├── video.mp4       # Основной трек
-│   ├── overlay.png     # Картинки для наложения
-│   └── fire.gif        # Анимации
+├── video.mp4           # Основной трек (минимальный пакет от digitizer)
+├── timeline.json       # (опционально) Сценарий событий
+└── assets/             # (опционально) Медиа-ресурсы для оверлеев
+    ├── overlay.png
+    └── fire.gif
 
 ```
+
+> Примечание: текущий digitizer создает минимальный пакет без `assets/` и без `timeline.json`.
 
 ## 3. Координатная система
 
@@ -39,20 +41,20 @@ level.mtp
 ```json
 {
   "version": "2.0",
-  "id": "level_001",
   "title": "Rasputin - Just Dance",
-  "author": "Community",
   "duration": 185.5,
   "files": {
-    "video": "assets/video.mp4",
+    "video": "video.mp4",
     "patterns": "patterns.json",
-    "timeline": "timeline.json"  <-- Новое поле
+    "timeline": "timeline.json"  // опционально
   }
 }
 
 ```
 
-## 5. Файл timeline.json (Ядро версии 2.0)
+Дополнительные поля (например, `id`, `author`) допускаются, но сейчас не используются в коде и не обязательны.
+
+## 5. Файл timeline.json (Ядро версии 2.0, опционально)
 
 Массив "Треков". Каждый трек содержит массив "Событий".
 
