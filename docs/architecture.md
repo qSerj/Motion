@@ -4,12 +4,12 @@
 Motion Trainer сейчас состоит из:
 
 - **Backend (Python)**: компьютерное зрение + игровой движок.
-  - Захватывает позу пользователя (webcam), сравнивает с референсным видео/уровнем.
-  - Публикует кадры и метаданные (очки, время, оверлеи) через ZeroMQ PUB.
-  - Принимает команды через ZeroMQ REP (load, pause, resume, restart, stop, digitize).
+  - Захватывает позу пользователя (webcam), рисует скелет поверх пользовательского кадра.
+  - Публикует кадры и метаданные (очки, время, оверлеи, прогресс оцифровки) через ZeroMQ PUB.
+  - Принимает команды через ZeroMQ REP (load, pause, resume, restart, seek, get_state, stop, digitize).
 
 - **Frontend (C# Avalonia)**: настольный UI.
-  - Загружает уровни `.mtp v2` (zip с manifest + patterns + assets).
+  - Загружает уровни `.mtp v2` (zip с manifest + patterns + video + опциональными assets/timeline).
   - Рендерит оверлеи поверх видео/канваса.
   - Может отправлять команды управления в backend и отображать поток backend.
 

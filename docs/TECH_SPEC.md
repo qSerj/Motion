@@ -27,8 +27,8 @@
 - Библиотеки: `mediapipe`, `opencv-python`, `numpy`, `pyzmq`, опционально `ffpyplayer`.
 - Функции:
   - Детекция позы, получение 3D landmarks.
-  - Подготовка двух видеопотоков (референс + пользователь).
-  - Публикация кадров и метаданных через ZeroMQ (PUB).
+  - Подготовка двух видеопотоков (референс + пользователь) и отрисовка скелета на пользовательском кадре.
+  - Публикация кадров и метаданных (включая активные оверлеи и прогресс оцифровки) через ZeroMQ (PUB).
   - Обработка команд управления через ZeroMQ (REP).
   - Оцифровка видео в MTP v2 (`manifest.json` + `patterns.json` + `video.mp4`).
 
@@ -38,7 +38,7 @@
   - Подключение к PUB-сокету backend (SUB).
   - Получение двух кадров (референс и пользователь) и метаданных.
   - Отображение кадров и статуса в UI.
-  - Отправка команд (load/pause/resume/digitize).
+  - Отправка команд (load/pause/resume/restart/seek/get_state/digitize).
 
 ### 3.2 Поток данных (текущая реализация)
 
@@ -49,12 +49,12 @@
 3. Для каждого кадра:
    - строит скелет пользователя;
    - накладывает скелет на кадр пользователя;
-   - обновляет метаданные (статус/счет/время);
+   - обновляет метаданные (статус/счет/время/оверлеи/прогресс);
    - отправляет **две** JPEG-картинки (референс + пользователь) и JSON-метаданные в ZeroMQ PUB.
 4. Frontend:
    - подписывается на тему `video`;
    - принимает метаданные и оба изображения;
-   - обновляет UI.
+   - обновляет UI и активные оверлеи.
 
 ## 4. Формат IPC (Backend ↔ Frontend)
 
@@ -77,8 +77,9 @@
   "state": "PLAYING",
   "score": 120,
   "time": 12.3,
-  "status": "PERFECT!",
-  "progress": 0
+  "status": "",
+  "progress": 0,
+  "overlays": []
 }
 ```
 
@@ -93,6 +94,7 @@
 | `status` | string | Статус/сообщение | Backend |
 | `time` | float | Текущее время в секундах | Backend |
 | `progress` | int | Прогресс оцифровки (0-100) | Backend |
+| `overlays` | array | Активные события из `timeline.json` | Backend |
 
 Frontend десериализует JSON в `GameData`.
 
@@ -121,6 +123,14 @@ Frontend десериализует JSON в `GameData`.
 ```
 
 ```json
+{ "type": "seek", "time": 12.5 }
+```
+
+```json
+{ "type": "get_state" }
+```
+
+```json
 { "type": "digitize", "source_path": "...", "output_path": "..." }
 ```
 
@@ -129,6 +139,7 @@ Frontend десериализует JSON в `GameData`.
 ```
 
 **Ответ:** `{"status":"ok"}` либо `{"status":"error","msg":"..."}`.
+Для `get_state` ответ включает поля `state` и `level` (пути к текущим ресурсам).
 
 ## 5. Форматы данных (детально)
 
@@ -161,13 +172,14 @@ Frontend десериализует JSON в `GameData`.
 ### 5.2 Контейнер `.mtp` (проектный формат)
 **Статус**: реализован MTP v2 для базового кейса (video + patterns).
 
-Актуальная структура (ZIP):
+Актуальная структура (ZIP, минимальный пакет от digitizer):
 ```
 <package>.mtp/
   manifest.json
   patterns.json
   video.mp4
   timeline.json    (опционально)
+  assets/          (опционально, для пользовательских пакетов)
 ```
 
 **Назначение файлов:**
@@ -189,7 +201,7 @@ Frontend десериализует JSON в `GameData`.
   - Основной игровой цикл.
   - IPC PUB/REP, подготовка кадров и метаданных.
 - `backend/core/digitizer.py`
-  - `VideoDigitizer` — создание MTP v2 (manifest + patterns + video).
+  - `VideoDigitizer` — создание MTP v2 (manifest + patterns + video) без `timeline.json`.
 - `backend/processors/video_processor.py`
   - Legacy `VideoDigitizer` — генерация JSON без упаковки.
 - `backend/play_game.py`
@@ -210,7 +222,7 @@ python backend/play_game.py
 
 ### 6.3 Логика оценки (текущая)
 - В игровом цикле выполняется трекинг позы и отрисовка скелета.
-- Сравнение углов и скоринг временно отключены (статус отправляется пустой строкой).
+- Сравнение углов и скоринг временно отключены (статус отправляется пустой строкой, счет не изменяется).
 
 ## 7. Frontend (C# / Avalonia) — состав и зоны ответственности
 
@@ -219,6 +231,7 @@ python backend/play_game.py
   - Подписка на ZeroMQ (NetMQ) и прием кадров.
   - Обновление `ReferenceFrame`, `UserFrame`, `Score`, `GameStatus`, `StatusColor`.
   - Отправка команд через REQ.
+  - Заполнение списка активных оверлеев из метаданных.
 - `MtpFileService`:
   - Чтение `manifest.json` и извлечение ресурсов во временную папку.
 - `GameData`:

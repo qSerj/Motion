@@ -4,19 +4,15 @@
 - pytest
 
 ## Что тестировать в первую очередь
-1) геометрические хелперы (`core/geometry.py`)
-2) правило активации оверлеев (временные окна)
-3) валидация схемы команд (формы JSON)
-4) структура результата digitizer:
-   - `.mtp` — это zip
-   - содержит `manifest.json`, `patterns.json`, `timeline.json` (по спецификации)
-   - JSON валиден и требуемые поля присутствуют
+1) правило активации оверлеев (временные окна)
+2) валидация схемы метаданных (минимальные поля JSON)
+3) структура результата digitizer (manifest + patterns + video)
 
 ## Рекомендуемая структура
-- backend/tests/test_geometry.py
 - backend/tests/test_overlay_activation.py
 - backend/tests/test_ipc_contract.py
-- backend/tests/test_mtp_output.py
+
+Пока что тесты покрывают только IPC/оверлеи; при расширении логики стоит добавить отдельные юнит-тесты для геометрии и digitizer.
 
 ## Примечания
 - Не открывать веб-камеру в юнит-тестах.
