@@ -41,7 +41,7 @@ public class MtpFileServiceTests
         }
         finally
         {
-            SafeDelete(zipPath);
+            SafeDeleteFile(zipPath);
         }
     }
 
@@ -54,62 +54,42 @@ public class MtpFileServiceTests
     }
 
     [Fact]
-    public async Task ExtractAssetToTempAsync_ExtractsFile_WhenAssetExists()
+    public async Task ExtractLevelToTempAsync_ExtractsAllFiles_PreservingStructure()
     {
-        const string assetInZip = "assets/patterns.bin";
-        byte[] assetBytes = Encoding.UTF8.GetBytes("hello-asset");
+        const string content1 = "hello-manifest";
+        const string content2 = "binary-image-data";
 
         string zipPath = CreateTempMtpZip(new Dictionary<string, string>
         {
-            ["manifest.json"] = "{}",
-            [assetInZip] = Convert.ToBase64String(assetBytes) // store as base64 text to keep it simple
+            ["manifest.json"] = content1,
+            ["assets/images/logo.png"] = content2
         });
+
+        string? extractedFolder = null;
 
         try
         {
-            // overwrite the entry with binary payload so we test true bytes extraction
-            using (var archive = ZipFile.Open(zipPath, ZipArchiveMode.Update))
+            var svc = new MtpFileService();
+            extractedFolder = await svc.ExtractLevelToTempAsync(zipPath);
+
+            Assert.False(string.IsNullOrWhiteSpace(extractedFolder));
+            Assert.True(Directory.Exists(extractedFolder));
+
+            string manifestPath = Path.Combine(extractedFolder, "manifest.json");
+            Assert.True(File.Exists(manifestPath));
+            Assert.Equal(content1, File.ReadAllText(manifestPath));
+
+            string imagePath = Path.Combine(extractedFolder, "assets", "images", "logo.png");
+            Assert.True(File.Exists(imagePath));
+            Assert.Equal(content2, File.ReadAllText(imagePath));
+        }
+        finally
+        {
+            SafeDeleteFile(zipPath);
+            if (extractedFolder != null)
             {
-                var entry = archive.GetEntry(assetInZip)!;
-                entry.Delete();
-                var newEntry = archive.CreateEntry(assetInZip);
-                using var s = newEntry.Open();
-                s.Write(assetBytes, 0, assetBytes.Length);
+                SafeDeleteDirectory(extractedFolder);
             }
-
-            var svc = new MtpFileService();
-            string? extractedPath = await svc.ExtractAssetToTempAsync(zipPath, assetInZip);
-
-            Assert.False(string.IsNullOrWhiteSpace(extractedPath));
-            Assert.True(File.Exists(extractedPath!));
-            Assert.Equal(assetBytes, File.ReadAllBytes(extractedPath!));
-
-            // cleanup extracted temp file
-            SafeDelete(extractedPath!);
-        }
-        finally
-        {
-            SafeDelete(zipPath);
-        }
-    }
-
-    [Fact]
-    public async Task ExtractAssetToTempAsync_ReturnsNull_WhenAssetMissing()
-    {
-        string zipPath = CreateTempMtpZip(new Dictionary<string, string>
-        {
-            ["manifest.json"] = "{}",
-        });
-
-        try
-        {
-            var svc = new MtpFileService();
-            string? extractedPath = await svc.ExtractAssetToTempAsync(zipPath, "nope.bin");
-            Assert.Null(extractedPath);
-        }
-        finally
-        {
-            SafeDelete(zipPath);
         }
     }
 
@@ -130,12 +110,29 @@ public class MtpFileServiceTests
         return zipPath;
     }
 
-    private static void SafeDelete(string path)
+    private static void SafeDeleteFile(string path)
     {
         try
         {
             if (File.Exists(path))
+            {
                 File.Delete(path);
+            }
+        }
+        catch
+        {
+            // ignore cleanup failures in tests
+        }
+    }
+
+    private static void SafeDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
         }
         catch
         {
