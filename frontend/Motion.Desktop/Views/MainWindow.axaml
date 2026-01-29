@@ -113,9 +113,9 @@
                                                    Foreground="Red" FontWeight="Bold" FontSize="50"
                                                    Effect="drop-shadow(2 2 2 black)"/>
                                         
-                                        <Image Width="{Binding Width}" 
-                                               Source="{Binding ImageSource}"
-                                               IsVisible="{Binding Type, Converter={x:Static conv:ObjectConverters.Equal}, ConverterParameter='image'}"
+                                        <Image Width="{Binding Width_Pixels}" 
+                                               Source="{Binding Bitmap}"
+                                               IsVisible="{Binding Bitmap, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
                                                Opacity="0.9"/>
                                     </Panel>
                                 </DataTemplate>

@@ -93,7 +93,7 @@ graph LR
 * `ffpyplayer` (опционально, звук)
 
 **UI (Frontend):**
-* C# .NET 8
+* C# .NET 10
 * Avalonia UI (Framework)
 * `NetMQ` (Transport)
 * `FFmpeg` (Media decoding optional)

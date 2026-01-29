@@ -56,9 +56,10 @@ public class MtpFileServiceTests
     [Fact]
     public async Task ExtractLevelToTempAsync_ExtractsAllFiles_PreservingStructure()
     {
+        // 1. Подготовка: Создаем ZIP с вложенными папками
         const string content1 = "hello-manifest";
         const string content2 = "binary-image-data";
-
+        
         string zipPath = CreateTempMtpZip(new Dictionary<string, string>
         {
             ["manifest.json"] = content1,
@@ -69,29 +70,33 @@ public class MtpFileServiceTests
 
         try
         {
+            // 2. Действие: Распаковываем весь уровень
             var svc = new MtpFileService();
             extractedFolder = await svc.ExtractLevelToTempAsync(zipPath);
 
+            // 3. Проверка
             Assert.False(string.IsNullOrWhiteSpace(extractedFolder));
             Assert.True(Directory.Exists(extractedFolder));
 
+            // Проверяем манифест в корне
             string manifestPath = Path.Combine(extractedFolder, "manifest.json");
             Assert.True(File.Exists(manifestPath));
             Assert.Equal(content1, File.ReadAllText(manifestPath));
 
+            // Проверяем вложенный файл
             string imagePath = Path.Combine(extractedFolder, "assets", "images", "logo.png");
             Assert.True(File.Exists(imagePath));
             Assert.Equal(content2, File.ReadAllText(imagePath));
         }
         finally
         {
+            // Очистка
             SafeDeleteFile(zipPath);
-            if (extractedFolder != null)
-            {
-                SafeDeleteDirectory(extractedFolder);
-            }
+            if (extractedFolder != null) SafeDeleteDirectory(extractedFolder);
         }
     }
+
+    // --- Вспомогательные методы ---
 
     private static string CreateTempMtpZip(Dictionary<string, string> entries)
     {
@@ -114,29 +119,17 @@ public class MtpFileServiceTests
     {
         try
         {
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            if (File.Exists(path)) File.Delete(path);
         }
-        catch
-        {
-            // ignore cleanup failures in tests
-        }
+        catch { /* ignore */ }
     }
 
     private static void SafeDeleteDirectory(string path)
     {
         try
         {
-            if (Directory.Exists(path))
-            {
-                Directory.Delete(path, true);
-            }
+            if (Directory.Exists(path)) Directory.Delete(path, true);
         }
-        catch
-        {
-            // ignore cleanup failures in tests
-        }
+        catch { /* ignore */ }
     }
 }

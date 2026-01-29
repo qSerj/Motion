@@ -1,72 +1,113 @@
+using System;
 using System.Text.Json;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.IO;
 
 namespace Motion.Desktop.Models
 {
     public partial class OverlayItem : ObservableObject
     {
-        public string Id { get; set; } = string.Empty; // Fix: Init
+        public string Id { get; set; } = string.Empty;
 
-        // MVVM Toolkit генерирует свойства X, Y, Width и т.д.
+        // Позиция и размер (Нормализованные 0..1)
         [ObservableProperty] private double _x;
         [ObservableProperty] private double _y;
         [ObservableProperty] private double _width;
+        
+        // Трансформации
         [ObservableProperty] private double _rotation = 0;
         [ObservableProperty] private double _scale = 1;
 
-        // Fix: делаем nullable, так как текст может отсутствовать
-        [ObservableProperty] private string? _text; 
-        
-        // Fix: инициализируем пустой строкой
-        [ObservableProperty] private string _imageSource = string.Empty; 
-        
+        // Контент
+        [ObservableProperty] private string? _text;
+        [ObservableProperty] private Bitmap? _bitmap; // Храним саму картинку, а не путь
         [ObservableProperty] private string _type = "unknown"; 
 
-        // Fix: MVVMTK0034 - Используем сгенерированные свойства (с большой буквы), а не поля
+        // Вычисляемые пиксели для Canvas (1000x1000)
         public double X_Pixels => X * 1000;      
         public double Y_Pixels => Y * 1000;
         public double Width_Pixels => Width * 1000;
 
-        // Fix: assetsRoot может быть null, помечаем string?
+        /// <summary>
+        /// Создает оверлей из JSON события.
+        /// </summary>
+        /// <param name="json">Элемент из массива overlays от Python</param>
+        /// <param name="assetsRoot">Абсолютный путь к папке с распакованным уровнем</param>
         public static OverlayItem FromJson(JsonElement json, string? assetsRoot)
         {
-            var props = json.GetProperty("props");
-            
-            // Безопасное получение asset
-            string assetVal = json.TryGetProperty("asset", out var assetProp) 
-                ? assetProp.GetString() ?? "" 
-                : "";
+            var item = new OverlayItem();
 
-            var item = new OverlayItem
+            // 1. Базовые поля
+            string assetVal = GetString(json, "asset");
+            double time = GetDouble(json, "time");
+            item.Type = GetString(json, "type");
+            item.Id = $"{assetVal}_{time}";
+
+            // 2. Свойства (props)
+            if (json.TryGetProperty("props", out var props))
             {
-                // Fix: безопасное получение времени
-                Id = assetVal + "_" + (json.TryGetProperty("time", out var t) ? t.GetDouble() : 0),
-                Type = json.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "unknown" : "unknown",
-            };
-
-            // ... (Код парсинга координат X, Y, Width, Rotation, Scale оставляем как был) ...
-            item.X = props.TryGetProperty("x", out var xVal) ? xVal.GetDouble() : 0;
-            item.Y = props.TryGetProperty("y", out var yVal) ? yVal.GetDouble() : 0;
-            item.Width = props.TryGetProperty("w", out var wVal) ? wVal.GetDouble() : 0.2;
-            
-            // Rotation & Scale logic...
-            item.Rotation = props.TryGetProperty("rotation", out var rotVal) ? rotVal.GetDouble() : 
-                            props.TryGetProperty("r", out rotVal) ? rotVal.GetDouble() : 0;
-                            
-            item.Scale = props.TryGetProperty("scale", out var scaleVal) ? scaleVal.GetDouble() : 
-                         props.TryGetProperty("s", out scaleVal) ? scaleVal.GetDouble() : 1;
-
-
-            if (item.Type == "image")
-            {
-                item.ImageSource = assetVal;
+                item.X = GetDouble(props, "x", 0);
+                item.Y = GetDouble(props, "y", 0);
+                item.Width = GetDouble(props, "w", 0.2); // Дефолтная ширина 20%
+                
+                // Поддержка разных имен для вращения/масштаба
+                item.Rotation = GetDouble(props, "rotation", GetDouble(props, "r", 0));
+                item.Scale = GetDouble(props, "scale", GetDouble(props, "s", 1));
             }
-            else if (item.Type == "text")
+            
+            // 3. Контент в зависимости от типа
+            if (item.Type == "text")
             {
-                item.Text = assetVal;
+                // Если assetVal пустой, пробуем взять текст из props
+                if (string.IsNullOrEmpty(assetVal) && json.TryGetProperty("props", out var p))
+                {
+                    item.Text = GetString(p, "text");
+                }
+                else
+                {
+                    item.Text = assetVal;
+                }
+            }
+            else if (item.Type == "image" && !string.IsNullOrEmpty(assetsRoot))
+            {
+                // Пытаемся загрузить картинку
+                try 
+                {
+                    // assetVal может быть "assets/logo.png"
+                    // assetsRoot это "C:/Temp/..."
+                    string fullPath = Path.Combine(assetsRoot, assetVal);
+                    if (File.Exists(fullPath))
+                    {
+                        item.Bitmap = new Bitmap(fullPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Overlay] Failed to load image: {assetVal}. {ex.Message}");
+                }
             }
 
             return item;
+        }
+
+        // Хелперы для безопасного чтения JSON
+        private static double GetDouble(JsonElement el, string key, double def = 0)
+        {
+            if (el.ValueKind == JsonValueKind.Object && el.TryGetProperty(key, out var prop))
+            {
+                if (prop.ValueKind == JsonValueKind.Number) return prop.GetDouble();
+            }
+            return def;
+        }
+
+        private static string GetString(JsonElement el, string key, string def = "")
+        {
+            if (el.ValueKind == JsonValueKind.Object && el.TryGetProperty(key, out var prop))
+            {
+                return prop.GetString() ?? def;
+            }
+            return def;
         }
     }
 }

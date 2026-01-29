@@ -12,43 +12,46 @@ namespace Motion.Desktop.Services
         public async Task<MtpManifest?> ReadManifestAsync(string mtpPath)
         {
             if (!File.Exists(mtpPath)) return null;
+            try 
+            {
+                using FileStream zipToOpen = new FileStream(mtpPath, FileMode.Open);
+                using ZipArchive archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read);
+                var entry = archive.GetEntry("manifest.json");
+                if (entry == null) return null;
 
-            using FileStream zipToOpen = new FileStream(mtpPath, FileMode.Open);
-            using ZipArchive archive = new ZipArchive(zipToOpen, ZipArchiveMode.Read);
-
-            var entry = archive.GetEntry("manifest.json");
-            if (entry == null) return null;
-
-            using Stream stream = entry.Open();
-            return await JsonSerializer.DeserializeAsync<MtpManifest>(stream);
+                using Stream stream = entry.Open();
+                return await JsonSerializer.DeserializeAsync<MtpManifest>(stream);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Manifest read error: {ex.Message}");
+                return null;
+            }
         }
 
-        public async Task<string?> ExtractAssetToTempAsync(string mtpPath, string assetPathInZip)
+        // НОВЫЙ МЕТОД: Распаковывает весь архив в папку и возвращает путь к ней
+        public async Task<string> ExtractLevelToTempAsync(string mtpPath)
         {
-            if (string.IsNullOrEmpty(assetPathInZip)) return null;
+            return await Task.Run(() =>
+            {
+                string tempFolder = Path.Combine(Path.GetTempPath(), "MotionTrainer", Guid.NewGuid().ToString());
+                Directory.CreateDirectory(tempFolder);
 
-            using ZipArchive archive = ZipFile.OpenRead(mtpPath);
-            var entry = archive.GetEntry(assetPathInZip.Replace("\\", "/"));
-
-            if (entry == null) return null;
-
-            string ext = Path.GetExtension(assetPathInZip);
-            string tempFolder = Path.Combine(Path.GetTempPath(), "MotionTrainer");
-            Directory.CreateDirectory(tempFolder);
-
-            string tempFile = Path.Combine(tempFolder, Guid.NewGuid() + ext);
-            entry.ExtractToFile(tempFile, overwrite: true);
-
-            return tempFile;
+                using (ZipArchive archive = ZipFile.OpenRead(mtpPath))
+                {
+                    archive.ExtractToDirectory(tempFolder);
+                }
+                
+                return tempFolder;
+            });
         }
 
         public async Task<MtpTimeline?> ReadTimelineAsync(string timelinePath)
         {
             if (!File.Exists(timelinePath)) return null;
-
-            using FileStream stream = File.OpenRead(timelinePath);
             try
             {
+                using FileStream stream = File.OpenRead(timelinePath);
                 return await JsonSerializer.DeserializeAsync<MtpTimeline>(stream);
             }
             catch

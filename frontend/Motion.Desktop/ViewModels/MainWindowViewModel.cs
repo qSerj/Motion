@@ -8,7 +8,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Motion.Desktop.Models; // Нужно для обновления UI из другого потока
+using Motion.Desktop.Models;
+using Motion.Desktop.Models.Mtp; // Нужно для обновления UI из другого потока
 using Motion.Desktop.Services;
 using Motion.Desktop.ViewModels.Editor;
 using NetMQ;
@@ -34,6 +35,8 @@ namespace Motion.Desktop.ViewModels
         public ObservableCollection<OverlayItem> ActiveOverlays { get; } = new();
         
         private readonly MtpFileService _mtpService = new MtpFileService();
+        
+        private string? _currentLevelRoot;
 
         public MainWindowViewModel()
         {
@@ -149,32 +152,33 @@ namespace Motion.Desktop.ViewModels
             }
         }
 
-        public async Task LoadLevelAsync(string mtpFilePath)
+public async Task LoadLevelAsync(string mtpFilePath)
         {
             try
             {
-                StatusText = "Manifest v2...";
+                StatusText = "Unpacking Level...";
                 IsWaiting = true;
 
-                var manifest = await _mtpService.ReadManifestAsync(mtpFilePath);
-                if (manifest == null) throw new Exception("Invalid .mtp archive");
+                // 1. Распаковываем ВЕСЬ архив во временную папку
+                _currentLevelRoot = await _mtpService.ExtractLevelToTempAsync(mtpFilePath);
+                
+                // 2. Читаем манифест оттуда
+                string manifestPath = Path.Combine(_currentLevelRoot, "manifest.json");
+                if (!File.Exists(manifestPath)) throw new Exception("Manifest missing in archive");
 
-                if (manifest.Version != "2.0")
-                {
-                    Console.WriteLine($"Warning: Loading format {manifest.Version}");
-                }
-
+                using var stream = File.OpenRead(manifestPath);
+                var manifest = await JsonSerializer.DeserializeAsync<MtpManifest>(stream);
+                
+                if (manifest == null) throw new Exception("Invalid manifest");
                 StatusText = $"Loading: {manifest.Title}";
 
-                string? videoPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.VideoPath);
-                
-                string? patternsPath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.PatternsPath);
-                
-                if (videoPath == null) throw new Exception("Manifest is missing 'video' file definition");
+                // 3. Формируем абсолютные пути для Backend
+                string videoPath = Path.Combine(_currentLevelRoot, manifest.VideoPath);
+                string patternsPath = Path.Combine(_currentLevelRoot, manifest.PatternsPath);
+                string timelinePath = Path.Combine(_currentLevelRoot, manifest.TimelinePath);
 
-                string? timelinePath = await _mtpService.ExtractAssetToTempAsync(mtpFilePath, manifest.TimelinePath);
-
-                if (timelinePath != null)
+                // 4. Загружаем таймлайн в Редактор
+                if (File.Exists(timelinePath))
                 {
                     var timelineModel = await _mtpService.ReadTimelineAsync(timelinePath);
                     if (timelineModel != null)
@@ -183,6 +187,7 @@ namespace Motion.Desktop.ViewModels
                     }
                 }
 
+                // 5. Отправляем команду Load
                 var cmd = new 
                 { 
                     type = "load", 
@@ -190,10 +195,8 @@ namespace Motion.Desktop.ViewModels
                     json_path = patternsPath,
                     timeline_path = timelinePath
                 };
-                
                 SendCommand(cmd);
 
-                // Сброс UI
                 Score = 0;
                 GameStatus = "";
                 IsWaiting = false;
@@ -202,6 +205,7 @@ namespace Motion.Desktop.ViewModels
             {
                 StatusText = $"Error: {ex.Message}";
                 IsWaiting = true;
+                _currentLevelRoot = null;
             }
         }
 
@@ -300,7 +304,7 @@ namespace Motion.Desktop.ViewModels
                                     {
                                         try
                                         {
-                                            var overlay = OverlayItem.FromJson(evt, null);
+                                            var overlay = OverlayItem.FromJson(evt, _currentLevelRoot);
                                             ActiveOverlays.Add(overlay);
                                         }
                                         catch (Exception e)
