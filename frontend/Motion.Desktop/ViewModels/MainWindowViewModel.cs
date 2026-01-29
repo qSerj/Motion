@@ -130,6 +130,7 @@ namespace Motion.Desktop.ViewModels
                     // Если есть таймлайн и он не пустой - загружаем его в Редактор
                     if (!string.IsNullOrEmpty(timelinePath) && File.Exists(timelinePath))
                     {
+                        _currentLevelRoot = Path.GetDirectoryName(timelinePath);
                         var timelineData = await _mtpService.ReadTimelineAsync(timelinePath);
                         if (timelineData != null)
                         {
@@ -152,7 +153,7 @@ namespace Motion.Desktop.ViewModels
             }
         }
 
-public async Task LoadLevelAsync(string mtpFilePath)
+        public async Task LoadLevelAsync(string mtpFilePath)
         {
             try
             {

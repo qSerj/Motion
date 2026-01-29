@@ -80,22 +80,16 @@
                 </Grid.ColumnDefinitions>
 
                 <Grid Grid.Column="0">
+                    
                     <Image Source="{Binding ReferenceFrame}" Stretch="Uniform"/>
 
                     <Viewbox Stretch="Uniform">
                         <ItemsControl ItemsSource="{Binding ActiveOverlays}" Width="1000" Height="1000">
-                            
+        
                             <ItemsControl.Styles>
-                                <Style Selector="ContentPresenter" x:CompileBindings="False" >
+                                <Style Selector="ContentPresenter" x:CompileBindings="False">
                                     <Setter Property="Canvas.Left" Value="{Binding X_Pixels}"/>
                                     <Setter Property="Canvas.Top" Value="{Binding Y_Pixels}"/>
-                                    <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-                                    <Setter Property="RenderTransform">
-                                        <TransformGroup>
-                                            <RotateTransform Angle="{Binding Rotation}"/>
-                                            <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
-                                        </TransformGroup>
-                                    </Setter>
                                 </Style>
                             </ItemsControl.Styles>
 
@@ -106,13 +100,20 @@
                             </ItemsControl.ItemsPanel>
 
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Panel>
+                                <DataTemplate DataType="models:OverlayItem"> <Panel RenderTransformOrigin="0.5,0.5">
+                    
+                                        <Panel.RenderTransform>
+                                            <TransformGroup>
+                                                <RotateTransform Angle="{Binding Rotation}"/>
+                                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                            </TransformGroup>
+                                        </Panel.RenderTransform>
+
                                         <TextBlock Text="{Binding Text}" 
                                                    IsVisible="{Binding Text, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
                                                    Foreground="Red" FontWeight="Bold" FontSize="50"
                                                    Effect="drop-shadow(2 2 2 black)"/>
-                                        
+                    
                                         <Image Width="{Binding Width_Pixels}" 
                                                Source="{Binding Bitmap}"
                                                IsVisible="{Binding Bitmap, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
