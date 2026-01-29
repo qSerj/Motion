@@ -32,6 +32,8 @@ Backend отправляет multipart-фреймы:
 Правило активации оверлеев (текущий backend):
 - событие активно, когда: `event.time <= current_time < event.time + event.duration`
 
+Примечание: фронтенд сейчас использует `state/score/time/status/overlays`; поле `progress` не отображается.
+
 ## REP-команды: канал управления
 Frontend отправляет JSON в REP-сокет backend.
 

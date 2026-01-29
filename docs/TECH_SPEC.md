@@ -94,9 +94,9 @@
 | `status` | string | Статус/сообщение | Backend |
 | `time` | float | Текущее время в секундах | Backend |
 | `progress` | int | Прогресс оцифровки (0-100) | Backend |
-| `overlays` | array | Активные события из `timeline.json` | Backend |
+| `overlays` | array | Активные события из `timeline.json` (исполняются и рендерятся в UI) | Backend |
 
-Frontend десериализует JSON в `GameData`.
+Frontend читает JSON в `GameData` (используются `state/score/time/status/overlays`; `progress` пока не используется).
 
 ### 4.4 Частота кадров
 - Backend ограничивает FPS через `target_delay`, зависящий от FPS референсного видео.
@@ -167,7 +167,7 @@ Frontend десериализует JSON в `GameData`.
 
 **Примечания:**
 - `timestamp` = `frame_count / fps`.
-- Сейчас учитываются только локти (см. TODO в коде).
+- Сейчас учитываются локти и плечи (см. digitizer).
 
 ### 5.2 Контейнер `.mtp` (проектный формат)
 **Статус**: реализован MTP v2 для базового кейса (video + patterns).
@@ -186,7 +186,7 @@ Frontend десериализует JSON в `GameData`.
 - `manifest.json`: метаданные уровня и карта файлов (ключи `video`, `patterns`, `timeline`).
 - `patterns.json`: эталоны движений (JSON).
 - `video.mp4`: референсное видео.
-- `timeline.json`: сценарий уровней (ивенты/подсказки/триггеры, не исполняется).
+- `timeline.json`: сценарий уровней (ивенты/подсказки/триггеры, исполняется: активные события отправляются в UI как overlays).
 
 ## 6. Backend (Python) — состав и зоны ответственности
 
