@@ -2,8 +2,18 @@
 
 ## Текущая структура
 - ViewModels/MainWindowViewModel.cs: оркестрация состояния UI, IPC-команды, загрузка уровней
-- Services/MtpFileService.cs: читает `.mtp` zip, извлекает manifest/ассеты
+
+## Services
+- `MtpFileService.cs`:
+  - Отвечает за работу с `.mtp` (ZIP) архивами.
+  - **Ключевое изменение (ADR-002):** При загрузке уровня распаковывает **весь архив целиком** во временную папку (`Temp/MotionTrainer/{GUID}/`).
+  - Возвращает абсолютный путь к корню распакованной папки.
+  - Это позволяет `OverlayItem` загружать картинки по относительным путям (например, `assets/icon.png`).
+
+## Models 
 - Models/Mtp/: DTO для manifest/timeline
+
+## Views
 - Views/: Avalonia UI
 
 ## Цели стабильности

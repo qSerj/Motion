@@ -1,13 +1,20 @@
 {
   "tracks": [
     {
-      "id": "test",
+      "id": "Hello",
       "events": [
         {
           "type": "text",
           "time": 0.0,
           "duration": 2.0,
           "asset": "HELLO WORLD!",
+          "props": { "x": 0.5, "y": 0.5 }
+        },
+        {
+          "type": "image",
+          "time": 2.5,
+          "duration": 2.0,
+          "asset": "./assets/logo.png",
           "props": { "x": 0.5, "y": 0.5 }
         }
       ]
