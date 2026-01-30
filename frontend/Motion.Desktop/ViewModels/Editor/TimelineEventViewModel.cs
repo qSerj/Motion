@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -19,6 +20,34 @@ public partial class TimelineEventViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(BorderBrush))]
     [NotifyPropertyChangedFor(nameof(BorderThickness))]
     private bool _isSelected;
+
+    public double Time
+    {
+        get => Model.Time;
+        set
+        {
+            if (Math.Abs(Model.Time - value) > 0.0001)
+            {
+                Model.Time = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public double Duration
+    {
+        get => Model.Duration;
+        set
+        {
+            if (Math.Abs(Model.Duration - value) > 0.0001)
+            {
+                Model.Duration = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    
 
     public IBrush BorderBrush => IsSelected ? Brushes.Wheat : Brushes.Transparent;
     public Thickness BorderThickness => IsSelected ? new Thickness(2) : new Thickness(0.5);
