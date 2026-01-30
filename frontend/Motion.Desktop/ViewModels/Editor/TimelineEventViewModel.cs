@@ -1,3 +1,5 @@
+using Avalonia;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Motion.Desktop.Models.Mtp;
 
@@ -10,7 +12,16 @@ public partial class TimelineEventViewModel : ViewModelBase
 
     // Свойства для биндинга в View (вычисляемые)
     [ObservableProperty] private double _xPixels;
+    
     [ObservableProperty] private double _widthPixels;
+    
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BorderBrush))]
+    [NotifyPropertyChangedFor(nameof(BorderThickness))]
+    private bool _isSelected;
+
+    public IBrush BorderBrush => IsSelected ? Brushes.Wheat : Brushes.Transparent;
+    public Thickness BorderThickness => IsSelected ? new Thickness(2) : new Thickness(0.5);
         
     // Цвет для красоты (зависит от типа события)
     public string BackgroundColor => Model.Type switch 

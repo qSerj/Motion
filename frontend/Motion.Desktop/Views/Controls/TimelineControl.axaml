@@ -56,7 +56,7 @@
                             </ItemsControl.Styles>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Width="40" Margin="-20,0,0,0"> 
+                                    <Grid Width="40" Margin="-20,0,0,0" > 
                                         <Line StartPoint="20,25" EndPoint="20,18" Stroke="#666" StrokeThickness="1" HorizontalAlignment="Left"/>
                                         <TextBlock Text="{Binding Text}" 
                                                    Foreground="#666" 
@@ -77,7 +77,7 @@
                                     <ItemsControl ItemsSource="{Binding Events}">
                                         <ItemsControl.ItemsPanel>
                                             <ItemsPanelTemplate>
-                                                <Canvas Height="30"/>
+                                                <Canvas Height="30" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>
                                         <ItemsControl.Styles>
@@ -92,8 +92,9 @@
                                                         Height="24"
                                                         Background="{Binding BackgroundColor}"
                                                         CornerRadius="3"
-                                                        BorderBrush="#FFFFFFFF"
-                                                        BorderThickness="0.5">
+                                                        BorderBrush="{Binding BorderBrush}"
+                                                        BorderThickness="{Binding BorderThickness}"
+                                                        PointerPressed="OnEventPointerPressed">
                                                     
                                                     <TextBlock Text="{Binding AssetName}" 
                                                                Foreground="White" 

@@ -21,6 +21,9 @@ namespace Motion.Desktop.Models.Mtp
 
     public class MtpEvent
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; } = string.Empty;
+
         [JsonPropertyName("type")]
         public string Type { get; set; } = string.Empty;
 

@@ -38,4 +38,12 @@ public partial class TimelineControl : UserControl
             editorVm.CurrentTime = targetTime;
         }
     }
+
+    private void OnEventPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control cntrl) return;
+        if (cntrl.DataContext is not TimelineEventViewModel eventViewModel) return;
+        if (DataContext is not TimelineEditorViewModel editorVm) return;
+        editorVm.SelectEvent(eventViewModel);
+    }
 }

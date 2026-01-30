@@ -19,6 +19,9 @@ namespace Motion.Desktop.ViewModels.Editor
         private double _durationSeconds;
 
         public ObservableCollection<TimelineTrackViewModel> Tracks { get; } = new();
+        
+        [ObservableProperty]
+        private TimelineEventViewModel? _selectedEvent;
 
         [ObservableProperty] [NotifyPropertyChangedFor(nameof(CurrentTimePixels))]
         private double _currentTime;
@@ -117,6 +120,42 @@ namespace Motion.Desktop.ViewModels.Editor
             Tracks.Add(new TimelineTrackViewModel(t4));
 
             RefreshLayout();
+        }
+
+        public void SelectEvent(TimelineEventViewModel? eventVm)
+        {
+            //если прислали null - убрать выделение
+            if (eventVm == null)
+            {
+                if (SelectedEvent != null) 
+                {
+                    SelectedEvent.IsSelected = false;
+                }
+                SelectedEvent = null;
+            }
+            else
+            {
+                if (SelectedEvent == null)
+                {
+                    SelectedEvent = eventVm;
+                    SelectedEvent.IsSelected = true;
+                }
+                else
+                {
+                    if (SelectedEvent == eventVm)
+                    {//если прислали, то событие, которое сейчас выбрано - нужно аннулировать его выбор.
+                        SelectedEvent.IsSelected = false;
+                        SelectedEvent = null;
+                    }
+                    else
+                    {//в противном случае
+                        SelectedEvent.IsSelected = false;//устанавливаем РАНЕЕ выбранному событию
+                        SelectedEvent = eventVm;//запоминаем новое в SelectedEvent
+                        SelectedEvent.IsSelected = true;
+                    }
+                }
+            }
+
         }
     }
 }
