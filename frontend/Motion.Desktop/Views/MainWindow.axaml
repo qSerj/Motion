@@ -6,13 +6,12 @@
         xmlns:models="using:Motion.Desktop.Models" 
         xmlns:conv="using:Avalonia.Data.Converters"
         xmlns:controls="clr-namespace:Motion.Desktop.Views.Controls"
-        mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
+        mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="800"
         x:Class="Motion.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Motion Trainer AI"
-        Background="#1E1E1E"
-        TransparencyLevelHint="AcrylicBlur"
+        Title="Motion Trainer AI (Dev Alpha)"
+        Background="#181818"
         WindowStartupLocation="CenterScreen">
 
     <Design.DataContext>
@@ -20,138 +19,154 @@
     </Design.DataContext>
 
     <Window.Styles>
-        <Style Selector="TextBlock.h1">
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="Foreground" Value="White"/>
-        </Style>
-        
-        <Style Selector="Button.dark">
-            <Setter Property="Background" Value="#333333"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="15,8"/>
+        <Style Selector="Button.tool">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#DDD"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#555"/>
         </Style>
-        <Style Selector="Button.dark:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#444444"/>
-            <Setter Property="BorderBrush" Value="#888"/>
-        </Style>
-        
-        <Style Selector="TextBlock.status">
-            <Setter Property="Effect" Value="drop-shadow(2 2 4 black)"/>
+        <Style Selector="Button.tool:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="Foreground" Value="White"/>
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto, *, Auto, Auto">
+    <Grid RowDefinitions="Auto, *, Auto">
 
-        <Border Grid.Row="0" Background="#252526" Padding="15" BoxShadow="0 4 10 0 #40000000">
+        <Border Grid.Row="0" Background="#252526" BorderBrush="#333" BorderThickness="0,0,0,1" Padding="5">
             <Grid ColumnDefinitions="Auto, *, Auto">
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
-                    <Button Classes="dark" Content="📂 Open lvl" Click="OpenFileButton_Clicked"/>
-                    <Button Classes="dark" Content="⚡ Create lvl" Background="#8A2BE2" Click="CreateLevelButton_Clicked"/>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
+                    <Button Classes="tool" Content="📂 Open" Click="OpenFileButton_Clicked"/>
+                    <Button Classes="tool" Content="💾 Save" Command="{Binding SaveLevelCommand}"/>
+                    <Rectangle Width="1" Height="16" Fill="#444" Margin="5,0"/>
+                    <Button Classes="tool" Content="⚡ New" Click="CreateLevelButton_Clicked"/>
+                    <Rectangle Width="1" Height="16" Fill="#444" Margin="5,0"/>
+                    
+                    <Button Classes="tool" Command="{Binding TogglePauseCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="5">
+                            <TextBlock Text="⏯️"/>
+                            <TextBlock Text="{Binding ButtonText}"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
-                <TextBlock Grid.Column="1" Text="MOTION TRAINER" Foreground="#666" 
-                           VerticalAlignment="Center" HorizontalAlignment="Center" 
-                           FontWeight="Black" LetterSpacing="2"/>
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}" 
+                           Foreground="#888" VerticalAlignment="Center" HorizontalAlignment="Center" 
+                           FontSize="12" FontStyle="Italic"/>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="SCORE:" VerticalAlignment="Center" Foreground="#AAA"/>
-                    <TextBlock Text="{Binding Score}" Foreground="#FFD700" 
-                               FontWeight="Bold" FontSize="28" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,10,0">
+                    <CheckBox IsChecked="{Binding IsTimelineVisible}" Content="Show Timeline" Foreground="#CCC"/>
+                    <Rectangle Width="1" Height="16" Fill="#444" Margin="5,0"/>
+                    <TextBlock Text="SCORE:" Foreground="#AAA" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding Score}" Foreground="#FFD700" FontWeight="Bold" FontSize="18" VerticalAlignment="Center"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Background="Black">
-            <StackPanel IsVisible="{Binding IsWaiting}" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
-                <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="18"/>
-            </StackPanel>
+        <Grid Grid.Row="1" Background="#000">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="2" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-            <Grid IsVisible="{Binding !IsWaiting}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="4" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <Image Source="{Binding ReferenceFrame}" Stretch="Uniform"/>
+                <Viewbox Stretch="Uniform">
+                    <ItemsControl ItemsSource="{Binding ActiveOverlays}" Width="1000" Height="1000">
+                        <ItemsControl.Styles>
+                            <Style Selector="ContentPresenter" x:CompileBindings="False">
+                                <Setter Property="Canvas.Left" Value="{Binding X_Pixels}"/>
+                                <Setter Property="Canvas.Top" Value="{Binding Y_Pixels}"/>
+                            </Style>
+                        </ItemsControl.Styles>
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:OverlayItem">
+                                <Panel RenderTransformOrigin="0.5,0.5">
+                                    <Panel.RenderTransform>
+                                        <TransformGroup>
+                                            <RotateTransform Angle="{Binding Rotation}"/>
+                                            <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                        </TransformGroup>
+                                    </Panel.RenderTransform>
+                                    <TextBlock Text="{Binding Text}" 
+                                               IsVisible="{Binding Text, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
+                                               Foreground="Red" FontWeight="Bold" FontSize="50" Effect="drop-shadow(2 2 2 black)"/>
+                                    <Image Width="{Binding Width_Pixels}" Source="{Binding Bitmap}"
+                                           IsVisible="{Binding Bitmap, Converter={x:Static conv:ObjectConverters.IsNotNull}}" Opacity="0.9"/>
+                                </Panel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Viewbox>
+            </Grid>
 
-                <Grid Grid.Column="0">
-                    
-                    <Image Source="{Binding ReferenceFrame}" Stretch="Uniform"/>
+            <GridSplitter Grid.Column="1" Background="#333" ResizeDirection="Columns"/>
 
-                    <Viewbox Stretch="Uniform">
-                        <ItemsControl ItemsSource="{Binding ActiveOverlays}" Width="1000" Height="1000">
-        
-                            <ItemsControl.Styles>
-                                <Style Selector="ContentPresenter" x:CompileBindings="False">
-                                    <Setter Property="Canvas.Left" Value="{Binding X_Pixels}"/>
-                                    <Setter Property="Canvas.Top" Value="{Binding Y_Pixels}"/>
-                                </Style>
-                            </ItemsControl.Styles>
-
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <Canvas Background="Transparent"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="models:OverlayItem"> <Panel RenderTransformOrigin="0.5,0.5">
-                    
-                                        <Panel.RenderTransform>
-                                            <TransformGroup>
-                                                <RotateTransform Angle="{Binding Rotation}"/>
-                                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
-                                            </TransformGroup>
-                                        </Panel.RenderTransform>
-
-                                        <TextBlock Text="{Binding Text}" 
-                                                   IsVisible="{Binding Text, Converter={x:Static conv:StringConverters.IsNotNullOrEmpty}}"
-                                                   Foreground="Red" FontWeight="Bold" FontSize="50"
-                                                   Effect="drop-shadow(2 2 2 black)"/>
-                    
-                                        <Image Width="{Binding Width_Pixels}" 
-                                               Source="{Binding Bitmap}"
-                                               IsVisible="{Binding Bitmap, Converter={x:Static conv:ObjectConverters.IsNotNull}}"
-                                               Opacity="0.9"/>
-                                    </Panel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Viewbox>
-                </Grid>
-                
-                <GridSplitter Grid.Column="1" Background="#333" ResizeDirection="Columns"/>
-
-                <Image Grid.Column="2" Source="{Binding UserFrame}" Stretch="Uniform"/>
-                
-                <TextBlock Grid.Column="0" Grid.ColumnSpan="3"
-                           Text="{Binding GameStatus}" 
-                           Classes="status"
-                           Foreground="{Binding StatusColor}"
-                           FontWeight="Black" FontSize="72"
+            <Grid Grid.Column="2">
+                <Image Source="{Binding UserFrame}" Stretch="Uniform"/>
+                <TextBlock Text="{Binding GameStatus}" Foreground="{Binding StatusColor}"
+                           FontWeight="Black" FontSize="72" Classes="status"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
                            IsHitTestVisible="False" Opacity="0.8"/>
             </Grid>
+            
+            <StackPanel Grid.Column="0" Grid.ColumnSpan="3" IsVisible="{Binding IsWaiting}"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                <TextBlock Text="⏳" FontSize="40" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding StatusText}" Foreground="White" FontSize="18"/>
+            </StackPanel>
         </Grid>
 
-        <Border Grid.Row="2" Background="#252526" BorderBrush="#444" BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="Auto, *">
+        <GridSplitter Grid.Row="2" Background="#333" ResizeDirection="Rows" VerticalAlignment="Top" Height="4"/>
         
-                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="10">
-                    <Button Classes="dark" 
-                            Command="{Binding TogglePauseCommand}" 
-                            Content="{Binding ButtonText}" 
-                            Width="80" Height="30" FontSize="12"/>
-                </StackPanel>
+        <Grid Grid.Row="2" Height="300" Background="#1E1E1E" IsVisible="{Binding IsTimelineVisible}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" MinWidth="200"/> <ColumnDefinition Width="4"/>                 <ColumnDefinition Width="*"/>                 </Grid.ColumnDefinitions>
 
-                <controls:TimelineControl Grid.Column="1" DataContext="{Binding Editor}"/>
-            </Grid>
-        </Border>
+            <Border Grid.Column="0" Background="#252526" BorderBrush="#333" BorderThickness="0,1,1,0">
+                <Grid RowDefinitions="Auto, *">
+                    <TextBlock Grid.Row="0" Text="PROPERTIES" FontWeight="Bold" Foreground="#888" Margin="10" FontSize="11"/>
+                    
+                    <ScrollViewer Grid.Row="1" Padding="10">
+                        <StackPanel>
+                            <TextBlock Text="No selection" Foreground="#555" 
+                                       IsVisible="{Binding Editor.SelectedEvent, Converter={x:Static ObjectConverters.IsNull}}"
+                                       HorizontalAlignment="Center" Margin="0,50,0,0"/>
+
+                            <StackPanel DataContext="{Binding Editor.SelectedEvent}" Spacing="10"
+                                        IsVisible="{Binding $parent[StackPanel].DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                
+                                <TextBlock Text="Start Time:" Foreground="#CCC" FontSize="11"/>
+                                <NumericUpDown Value="{Binding Time, Mode=TwoWay}" Increment="0.1" Minimum="0" FormatString="0.00" HorizontalAlignment="Stretch"/>
+
+                                <TextBlock Text="Duration:" Foreground="#CCC" FontSize="11"/>
+                                <NumericUpDown Value="{Binding Duration, Mode=TwoWay}" Increment="0.1" Minimum="0.1" FormatString="0.00" HorizontalAlignment="Stretch"/>
+
+                                <TextBlock Text="Asset / Type:" Foreground="#CCC" FontSize="11" Margin="0,10,0,0"/>
+                                <TextBox Text="{Binding AssetName}" IsReadOnly="True" Background="#333" BorderThickness="0"/>
+                                
+                                <Separator Margin="0,10" Background="#444"/>
+                                <TextBlock Text="Debug Info:" Foreground="#555" FontSize="10"/>
+                                <TextBlock Text="{Binding Model.Id}" Foreground="#555" FontSize="10"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="#333" ResizeDirection="Columns"/>
+
+            <Border Grid.Column="2" Background="#1E1E1E" BorderBrush="#333" BorderThickness="0,1,0,0">
+                <controls:TimelineControl DataContext="{Binding Editor}"/>
+            </Border>
+        </Grid>
 
     </Grid>
 </Window>

@@ -30,6 +30,8 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private string _buttonText = "PAUSE";
         [ObservableProperty] private string _currentState = "IDLE";
         
+        [ObservableProperty] private bool _isTimelineVisible = true;
+        
         public TimelineEditorViewModel Editor { get; } = new();
         
         public ObservableCollection<OverlayItem> ActiveOverlays { get; } = new();
@@ -332,5 +334,19 @@ namespace Motion.Desktop.ViewModels
                 }
             }
         }
+
+        [RelayCommand]
+        public void ToggleTimeline()
+        {
+            IsTimelineVisible = !IsTimelineVisible;
+        }
+
+        [RelayCommand]
+        public void SaveLevel()
+        {
+            StatusText = "Save logic comming soon...";
+            
+        }
+        
     }
 }

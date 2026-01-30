@@ -3,70 +3,44 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Motion.Desktop.ViewModels.Editor"
-             xmlns:conv="using:Avalonia.Data.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="300"
              x:Class="Motion.Desktop.Views.Controls.TimelineControl"
              x:DataType="vm:TimelineEditorViewModel">
 
     <Grid RowDefinitions="Auto, *">
-        
-        <Border Grid.Row="0" Background="#333" Padding="5" BorderBrush="#555" BorderThickness="0,0,0,1">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="Scale:" VerticalAlignment="Center" Foreground="#AAA" FontSize="10"/>
-                <Slider Width="150" 
-                        Minimum="10" Maximum="200" 
-                        Value="{Binding PixelsPerSecond}"
-                        VerticalAlignment="Center"/>
+        <Border Grid.Row="0" Background="#2D2D30" Padding="5,2" BorderBrush="#444" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <TextBlock Text="Zoom:" VerticalAlignment="Center" Foreground="#AAA" FontSize="10"/>
+                <Slider Width="100" Minimum="10" Maximum="200" Value="{Binding PixelsPerSecond}" VerticalAlignment="Center"/>
             </StackPanel>
         </Border>
 
-        <Grid ColumnDefinitions="*, Auto, 250">
-        
-            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto" Background="#1E1E1E">
-            <Grid ColumnDefinitions="120, Auto"> <ItemsControl Grid.Column="0" ItemsSource="{Binding Tracks}" Margin="0,25,0,0">
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto" Background="#1E1E1E">
+            <Grid ColumnDefinitions="120, Auto">
+                
+                <ItemsControl Grid.Column="0" ItemsSource="{Binding Tracks}" Margin="0,25,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Height="30" BorderBrush="#333" BorderThickness="0,0,1,1" Background="#252526">
-                                <TextBlock Text="{Binding Name}" 
-                                           VerticalAlignment="Center" 
-                                           Margin="5,0" 
-                                           FontSize="11"
-                                           Foreground="#AAA" FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0" FontSize="11" Foreground="#AAA" TextTrimming="CharacterEllipsis"/>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <Grid Grid.Column="1"
-                      Width="{Binding TotalWidthPixels}"
-                      RowDefinitions="25, *"
-                      Name="TimelineArea"
-                      Background="Transparent"
-                      PointerPressed="OnTimelinePointerPressed">
-    
-                    <Border Grid.Row="0" Background="#2D2D30" BorderBrush="#444" BorderThickness="0,0,0,1">
+                <Grid Grid.Column="1" Width="{Binding TotalWidthPixels}" RowDefinitions="25, *" Name="TimelineArea" Background="Transparent" PointerPressed="OnTimelinePointerPressed">
+                    
+                    <Border Grid.Row="0" Background="#252526" BorderBrush="#444" BorderThickness="0,0,0,1">
                         <ItemsControl ItemsSource="{Binding Ticks}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <Canvas Height="25"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas Height="25"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.Styles>
-                                <Style Selector="ContentPresenter" x:CompileBindings="False">
-                                    <Setter Property="Canvas.Left" Value="{Binding XPixels}"/>
-                                </Style>
+                                <Style Selector="ContentPresenter" x:CompileBindings="False"><Setter Property="Canvas.Left" Value="{Binding XPixels}"/></Style>
                             </ItemsControl.Styles>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Width="40" Margin="-20,0,0,0" > 
+                                    <Grid Width="40" Margin="-20,0,0,0">
                                         <Line StartPoint="20,25" EndPoint="20,18" Stroke="#666" StrokeThickness="1" HorizontalAlignment="Left"/>
-                                        <TextBlock Text="{Binding Text}" 
-                                                   Foreground="#666" 
-                                                   FontSize="9" 
-                                                   HorizontalAlignment="Center" 
-                                                   VerticalAlignment="Top"
-                                                   Margin="0,2,0,0"/>
+                                        <TextBlock Text="{Binding Text}" Foreground="#666" FontSize="9" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -78,34 +52,14 @@
                             <DataTemplate>
                                 <Border Height="30" BorderBrush="#333" BorderThickness="0,0,0,1">
                                     <ItemsControl ItemsSource="{Binding Events}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <Canvas Height="30" />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemsPanel><ItemsPanelTemplate><Canvas Height="30"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                                         <ItemsControl.Styles>
-                                            <Style Selector="ContentPresenter" x:CompileBindings="False">
-                                                <Setter Property="Canvas.Left" Value="{Binding XPixels}"/>
-                                            </Style>
+                                            <Style Selector="ContentPresenter" x:CompileBindings="False"><Setter Property="Canvas.Left" Value="{Binding XPixels}"/></Style>
                                         </ItemsControl.Styles>
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Canvas.Top="3"
-                                                        Width="{Binding WidthPixels}"
-                                                        Height="24"
-                                                        Background="{Binding BackgroundColor}"
-                                                        CornerRadius="3"
-                                                        BorderBrush="{Binding BorderBrush}"
-                                                        BorderThickness="{Binding BorderThickness}"
-                                                        PointerPressed="OnEventPointerPressed">
-                                                    
-                                                    <TextBlock Text="{Binding AssetName}" 
-                                                               Foreground="White" 
-                                                               FontSize="10"
-                                                               Margin="4,0"
-                                                               VerticalAlignment="Center"
-                                                               HorizontalAlignment="Left"
-                                                               TextTrimming="CharacterEllipsis"/>
+                                                <Border Canvas.Top="3" Width="{Binding WidthPixels}" Height="24" Background="{Binding BackgroundColor}" CornerRadius="3" BorderBrush="{Binding BorderBrush}" BorderThickness="{Binding BorderThickness}" PointerPressed="OnEventPointerPressed" ToolTip.Tip="{Binding AssetName}">
+                                                    <TextBlock Text="{Binding AssetName}" Foreground="White" FontSize="10" Margin="4,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                 </Border>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -115,54 +69,11 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <Canvas Grid.Row="0" Grid.RowSpan="2">
-                        <Rectangle Canvas.Left="{Binding CurrentTimePixels}" 
-                                   Width="1" Height="2000" Fill="#FF4444" Opacity="1.0" IsHitTestVisible="False"/>
+                    <Canvas Grid.Row="0" Grid.RowSpan="2" IsHitTestVisible="False">
+                        <Rectangle Canvas.Left="{Binding CurrentTimePixels}" Width="1" Height="2000" Fill="#FF4444"/>
                     </Canvas>
-
                 </Grid>
-                
             </Grid>
         </ScrollViewer>
-            
-            <GridSplitter Grid.Column="1" Background="#444" ResizeDirection="Columns"/>
-            
-            <Border Grid.Column="2" Background="#252526" BorderBrush="#444" BorderThickness="1,0,0,0" Padding="10">
-        
-                <StackPanel IsVisible="{Binding SelectedEvent, Converter={x:Static ObjectConverters.IsNotNull}}">
-            
-                    <TextBlock Text="PROPERTIES" FontWeight="Bold" Foreground="#888" Margin="0,0,0,10"/>
-
-                    <StackPanel DataContext="{Binding SelectedEvent}" Spacing="10">
-
-                        <TextBlock Text="Start Time (sec):" Foreground="#CCC"/>
-                        <NumericUpDown Value="{Binding Time}" 
-                                       Increment="0.1" 
-                                       Minimum="0"
-                                       FormatString="0.00"/>
-
-                        <TextBlock Text="Duration (sec):" Foreground="#CCC" Margin="0,10,0,0"/>
-                        <NumericUpDown Value="{Binding Duration}" 
-                                       Increment="0.1" 
-                                       Minimum="0.1"
-                                       FormatString="0.00"/>
-
-                        <TextBlock Text="Asset Name:" Foreground="#CCC" Margin="0,10,0,0"/>
-                        <TextBox Text="{Binding AssetName}" IsReadOnly="True" Opacity="0.7"/>
-
-                        <TextBlock Text="Event ID:" Foreground="#AAA" FontSize="10" Margin="0,5,0,0"/>
-                        <TextBlock Text="{Binding Model.Id}" Foreground="#555" FontSize="10"/>
-
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <TextBlock Grid.Column="2" 
-                       Text="No Selection" 
-                       Foreground="#555" 
-                       HorizontalAlignment="Center" 
-                       VerticalAlignment="Center"
-                       IsVisible="{Binding SelectedEvent, Converter={x:Static ObjectConverters.IsNull}}"/>
-        </Grid>
     </Grid>
 </UserControl>
