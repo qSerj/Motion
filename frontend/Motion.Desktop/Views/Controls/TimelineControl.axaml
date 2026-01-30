@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Motion.Desktop.ViewModels.Editor"
+             xmlns:conv="using:Avalonia.Data.Converters"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="300"
              x:Class="Motion.Desktop.Views.Controls.TimelineControl"
              x:DataType="vm:TimelineEditorViewModel">
@@ -19,7 +20,9 @@
             </StackPanel>
         </Border>
 
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto" Background="#1E1E1E">
+        <Grid ColumnDefinitions="*, Auto, 250">
+        
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Auto" Background="#1E1E1E">
             <Grid ColumnDefinitions="120, Auto"> <ItemsControl Grid.Column="0" ItemsSource="{Binding Tracks}" Margin="0,25,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -121,5 +124,45 @@
                 
             </Grid>
         </ScrollViewer>
+            
+            <GridSplitter Grid.Column="1" Background="#444" ResizeDirection="Columns"/>
+            
+            <Border Grid.Column="2" Background="#252526" BorderBrush="#444" BorderThickness="1,0,0,0" Padding="10">
+        
+                <StackPanel IsVisible="{Binding SelectedEvent, Converter={x:Static ObjectConverters.IsNotNull}}">
+            
+                    <TextBlock Text="PROPERTIES" FontWeight="Bold" Foreground="#888" Margin="0,0,0,10"/>
+
+                    <StackPanel DataContext="{Binding SelectedEvent}" Spacing="10">
+
+                        <TextBlock Text="Start Time (sec):" Foreground="#CCC"/>
+                        <NumericUpDown Value="{Binding Time}" 
+                                       Increment="0.1" 
+                                       Minimum="0"
+                                       FormatString="0.00"/>
+
+                        <TextBlock Text="Duration (sec):" Foreground="#CCC" Margin="0,10,0,0"/>
+                        <NumericUpDown Value="{Binding Duration}" 
+                                       Increment="0.1" 
+                                       Minimum="0.1"
+                                       FormatString="0.00"/>
+
+                        <TextBlock Text="Asset Name:" Foreground="#CCC" Margin="0,10,0,0"/>
+                        <TextBox Text="{Binding AssetName}" IsReadOnly="True" Opacity="0.7"/>
+
+                        <TextBlock Text="Event ID:" Foreground="#AAA" FontSize="10" Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding Model.Id}" Foreground="#555" FontSize="10"/>
+
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Grid.Column="2" 
+                       Text="No Selection" 
+                       Foreground="#555" 
+                       HorizontalAlignment="Center" 
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding SelectedEvent, Converter={x:Static ObjectConverters.IsNull}}"/>
+        </Grid>
     </Grid>
 </UserControl>

@@ -13,9 +13,9 @@ public partial class TimelineEventViewModel : ViewModelBase
 
     // Свойства для биндинга в View (вычисляемые)
     [ObservableProperty] private double _xPixels;
-    
+
     [ObservableProperty] private double _widthPixels;
-    
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BorderBrush))]
     [NotifyPropertyChangedFor(nameof(BorderThickness))]
@@ -30,6 +30,7 @@ public partial class TimelineEventViewModel : ViewModelBase
             {
                 Model.Time = value;
                 OnPropertyChanged();
+                RecalculateLayout(_cachedPixelPerSecond);
             }
         }
     }
@@ -43,20 +44,22 @@ public partial class TimelineEventViewModel : ViewModelBase
             {
                 Model.Duration = value;
                 OnPropertyChanged();
+                RecalculateLayout(_cachedPixelPerSecond);
             }
         }
     }
 
-    
+    private double _cachedPixelPerSecond;
+
 
     public IBrush BorderBrush => IsSelected ? Brushes.Wheat : Brushes.Transparent;
     public Thickness BorderThickness => IsSelected ? new Thickness(2) : new Thickness(0.5);
-        
+
     // Цвет для красоты (зависит от типа события)
-    public string BackgroundColor => Model.Type switch 
+    public string BackgroundColor => Model.Type switch
     {
         "image" => "#68217A", // Фиолетовый
-        "text" => "#007ACC",  // Синий
+        "text" => "#007ACC", // Синий
         _ => "#444444"
     };
 
@@ -70,11 +73,13 @@ public partial class TimelineEventViewModel : ViewModelBase
     // Тот самый метод "пересчета"
     public void RecalculateLayout(double pixelsPerSecond)
     {
+        _cachedPixelPerSecond = pixelsPerSecond;
+
         // Формула: Время * Масштаб
         XPixels = Model.Time * pixelsPerSecond;
         WidthPixels = Model.Duration * pixelsPerSecond;
-            
+
         // Если событие слишком короткое, даем ему мин. ширину, чтобы его можно было увидеть
-        if (WidthPixels < 2) WidthPixels = 2; 
+        if (WidthPixels < 2) WidthPixels = 2;
     }
 }
