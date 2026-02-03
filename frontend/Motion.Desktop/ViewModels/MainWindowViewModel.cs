@@ -31,6 +31,7 @@ namespace Motion.Desktop.ViewModels
         [ObservableProperty] private string _currentState = "IDLE";
         
         [ObservableProperty] private bool _isTimelineVisible = true;
+        [ObservableProperty] private bool _isLevelLoaded = false;
         
         public TimelineEditorViewModel Editor { get; } = new();
         
@@ -39,6 +40,8 @@ namespace Motion.Desktop.ViewModels
         private readonly MtpFileService _mtpService = new MtpFileService();
         
         private string? _currentLevelRoot;
+        private string? _currentTimelinePath;
+        private string? _currentMtpPath;
 
         public MainWindowViewModel()
         {
@@ -133,6 +136,7 @@ namespace Motion.Desktop.ViewModels
                     if (!string.IsNullOrEmpty(timelinePath) && File.Exists(timelinePath))
                     {
                         _currentLevelRoot = Path.GetDirectoryName(timelinePath);
+                        _currentTimelinePath = timelinePath;
                         var timelineData = await _mtpService.ReadTimelineAsync(timelinePath);
                         if (timelineData != null)
                         {
@@ -145,6 +149,7 @@ namespace Motion.Desktop.ViewModels
                             Editor.LoadData(timelineData, 300); 
                             StatusText = "Session Restored";
                             IsWaiting = false;
+                            IsLevelLoaded = true;
                         }
                     }
                 }
@@ -163,6 +168,7 @@ namespace Motion.Desktop.ViewModels
                 IsWaiting = true;
 
                 // 1. Распаковываем ВЕСЬ архив во временную папку
+                _currentMtpPath = mtpFilePath;
                 _currentLevelRoot = await _mtpService.ExtractLevelToTempAsync(mtpFilePath);
                 
                 // 2. Читаем манифест оттуда
@@ -179,6 +185,7 @@ namespace Motion.Desktop.ViewModels
                 string videoPath = Path.Combine(_currentLevelRoot, manifest.VideoPath);
                 string patternsPath = Path.Combine(_currentLevelRoot, manifest.PatternsPath);
                 string timelinePath = Path.Combine(_currentLevelRoot, manifest.TimelinePath);
+                _currentTimelinePath = timelinePath;
 
                 // 4. Загружаем таймлайн в Редактор
                 if (File.Exists(timelinePath))
@@ -203,12 +210,16 @@ namespace Motion.Desktop.ViewModels
                 Score = 0;
                 GameStatus = "";
                 IsWaiting = false;
+                IsLevelLoaded = true;
             }
             catch (Exception ex)
             {
                 StatusText = $"Error: {ex.Message}";
                 IsWaiting = true;
                 _currentLevelRoot = null;
+                _currentTimelinePath = null;
+                _currentMtpPath = null;
+                IsLevelLoaded = false;
             }
         }
 
@@ -342,11 +353,44 @@ namespace Motion.Desktop.ViewModels
         }
 
         [RelayCommand]
-        public void SaveLevel()
+        public async Task SaveLevel()
         {
-            StatusText = "Save logic comming soon...";
-            
+            if (string.IsNullOrWhiteSpace(_currentTimelinePath))
+            {
+                StatusText = "Error: timeline not loaded";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_currentLevelRoot) || string.IsNullOrWhiteSpace(_currentMtpPath))
+            {
+                StatusText = "Error: level path not loaded";
+                return;
+            }
+
+            try
+            {
+                var timeline = Editor.ExportTimeline();
+                await _mtpService.WriteTimelineAsync(_currentTimelinePath, timeline);
+                await _mtpService.SaveLevelArchiveAsync(_currentLevelRoot, _currentMtpPath);
+                StatusText = "Timeline saved";
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Save error: {ex.Message}";
+            }
         }
-        
+
+        public async Task SaveLevelAsAsync(string mtpFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(mtpFilePath))
+            {
+                StatusText = "Error: invalid save path";
+                return;
+            }
+
+            _currentMtpPath = mtpFilePath;
+            await SaveLevel();
+        }
+       
     }
 }

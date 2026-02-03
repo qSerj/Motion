@@ -96,7 +96,129 @@ public class MtpFileServiceTests
         }
     }
 
+    [Fact]
+    public async Task WriteTimelineAsync_WritesFile_ReadableByReadTimelineAsync()
+    {
+        using var propsDoc = JsonDocument.Parse("{\"x\":0.5,\"y\":0.5,\"scale\":0.0,\"rotation\":0.0}");
+        var props = propsDoc.RootElement.Clone();
+        var timeline = new MtpTimeline
+        {
+            Tracks =
+            [
+                new MtpTrack
+                {
+                    Id = "Track-1",
+                    Events =
+                    [
+                        new MtpEvent
+                        {
+                            Id = "Evt-1",
+                            Type = "text",
+                            Time = 1.25,
+                            Duration = 2.5,
+                            Asset = "Hello",
+                            Props = props
+                        }
+                    ]
+                }
+            ]
+        };
+
+        string tempDir = Path.Combine(Path.GetTempPath(), $"timeline-{Guid.NewGuid():N}");
+        string timelinePath = Path.Combine(tempDir, "timeline.json");
+
+        try
+        {
+            var svc = new MtpFileService();
+            await svc.WriteTimelineAsync(timelinePath, timeline);
+
+            MtpTimeline? loaded = await svc.ReadTimelineAsync(timelinePath);
+
+            Assert.NotNull(loaded);
+            Assert.Single(loaded!.Tracks);
+            Assert.Equal("Track-1", loaded.Tracks[0].Id);
+            Assert.Single(loaded.Tracks[0].Events);
+            Assert.Equal(1.25, loaded.Tracks[0].Events[0].Time);
+            Assert.Equal(2.5, loaded.Tracks[0].Events[0].Duration);
+            Assert.Equal(0.5, loaded.Tracks[0].Events[0].Props.GetProperty("x").GetDouble());
+            Assert.Equal(0.5, loaded.Tracks[0].Events[0].Props.GetProperty("y").GetDouble());
+            Assert.Equal(0.0, loaded.Tracks[0].Events[0].Props.GetProperty("scale").GetDouble());
+            Assert.Equal(0.0, loaded.Tracks[0].Events[0].Props.GetProperty("rotation").GetDouble());
+        }
+        finally
+        {
+            SafeDeleteDirectory(tempDir);
+        }
+    }
+
     // --- Вспомогательные методы ---
+
+    [Fact]
+    public async Task SaveLevelArchiveAsync_WritesMtpWithUpdatedTimeline()
+    {
+        using var propsDoc = JsonDocument.Parse("{\"x\":0.5,\"y\":0.5,\"scale\":0.0,\"rotation\":0.0}");
+        var props = propsDoc.RootElement.Clone();
+        var timeline = new MtpTimeline
+        {
+            Tracks =
+            [
+                new MtpTrack
+                {
+                    Id = "overlay",
+                    Events =
+                    [
+                        new MtpEvent
+                        {
+                            Id = "evt-1",
+                            Type = "image",
+                            Time = 1.0,
+                            Duration = 2.0,
+                            Asset = "assets/logo.png",
+                            Props = props
+                        }
+                    ]
+                }
+            ]
+        };
+
+        string levelRoot = Path.Combine(Path.GetTempPath(), $"level-{Guid.NewGuid():N}");
+        string mtpPath = Path.Combine(Path.GetTempPath(), $"level-{Guid.NewGuid():N}.mtp");
+        Directory.CreateDirectory(levelRoot);
+
+        string manifestPath = Path.Combine(levelRoot, "manifest.json");
+        string timelinePath = Path.Combine(levelRoot, "timeline.json");
+        File.WriteAllText(manifestPath, "{\"version\":\"2.0\",\"title\":\"Test\",\"duration\":10,\"files\":{\"timeline\":\"timeline.json\"}}");
+
+        try
+        {
+            var svc = new MtpFileService();
+            await svc.WriteTimelineAsync(timelinePath, timeline);
+            await svc.SaveLevelArchiveAsync(levelRoot, mtpPath);
+
+            using var archive = ZipFile.OpenRead(mtpPath);
+            var timelineEntry = archive.GetEntry("timeline.json");
+            Assert.NotNull(timelineEntry);
+
+            await using var stream = timelineEntry!.Open();
+            var loaded = await JsonSerializer.DeserializeAsync<MtpTimeline>(stream);
+
+            Assert.NotNull(loaded);
+            Assert.Single(loaded!.Tracks);
+            Assert.Equal("overlay", loaded.Tracks[0].Id);
+            Assert.Single(loaded.Tracks[0].Events);
+            Assert.Equal(1.0, loaded.Tracks[0].Events[0].Time);
+            Assert.Equal(2.0, loaded.Tracks[0].Events[0].Duration);
+            Assert.Equal(0.5, loaded.Tracks[0].Events[0].Props.GetProperty("x").GetDouble());
+            Assert.Equal(0.5, loaded.Tracks[0].Events[0].Props.GetProperty("y").GetDouble());
+            Assert.Equal(0.0, loaded.Tracks[0].Events[0].Props.GetProperty("scale").GetDouble());
+            Assert.Equal(0.0, loaded.Tracks[0].Events[0].Props.GetProperty("rotation").GetDouble());
+        }
+        finally
+        {
+            SafeDeleteFile(mtpPath);
+            SafeDeleteDirectory(levelRoot);
+        }
+    }
 
     private static string CreateTempMtpZip(Dictionary<string, string> entries)
     {

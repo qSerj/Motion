@@ -40,7 +40,8 @@
                 
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
                     <Button Classes="tool" Content="📂 Open" Click="OpenFileButton_Clicked"/>
-                    <Button Classes="tool" Content="💾 Save" Command="{Binding SaveLevelCommand}"/>
+                    <Button Classes="tool" Content="Save" Command="{Binding SaveLevelCommand}" IsEnabled="{Binding IsLevelLoaded}"/>
+                    <Button Classes="tool" Content="Save As" Click="SaveAsButton_Clicked" IsEnabled="{Binding IsLevelLoaded}"/>
                     <Rectangle Width="1" Height="16" Fill="#444" Margin="5,0"/>
                     <Button Classes="tool" Content="⚡ New" Click="CreateLevelButton_Clicked"/>
                     <Rectangle Width="1" Height="16" Fill="#444" Margin="5,0"/>

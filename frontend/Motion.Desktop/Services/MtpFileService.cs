@@ -59,5 +59,54 @@ namespace Motion.Desktop.Services
                 return null;
             }
         }
+
+        public async Task WriteTimelineAsync(string timelinePath, MtpTimeline timeline)
+        {
+            try
+            {
+                string? directory = Path.GetDirectoryName(timelinePath);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                await using FileStream stream = new FileStream(timelinePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await JsonSerializer.SerializeAsync(stream, timeline);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Timeline write error: {ex.Message}");
+                throw;
+            }
+        }
+
+        public async Task SaveLevelArchiveAsync(string levelRoot, string mtpPath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(levelRoot) || !Directory.Exists(levelRoot))
+                {
+                    throw new DirectoryNotFoundException($"Level root not found: {levelRoot}");
+                }
+
+                string? destDir = Path.GetDirectoryName(mtpPath);
+                if (!string.IsNullOrWhiteSpace(destDir))
+                {
+                    Directory.CreateDirectory(destDir);
+                }
+
+                if (File.Exists(mtpPath))
+                {
+                    File.Delete(mtpPath);
+                }
+
+                await Task.Run(() => ZipFile.CreateFromDirectory(levelRoot, mtpPath, CompressionLevel.Optimal, false));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Archive save error: {ex.Message}");
+                throw;
+            }
+        }
     }
 }

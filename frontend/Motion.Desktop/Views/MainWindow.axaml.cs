@@ -85,4 +85,32 @@ public partial class MainWindow : Window
             await vm.DigitizeVideoAsync(sourcePath, destPath);
         }
     }
+
+    private async void SaveAsButton_Clicked(object sender, RoutedEventArgs e)
+    {
+        var savedFile = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Save Level As...",
+            DefaultExtension = ".mtp",
+            SuggestedFileName = "Level.mtp",
+            FileTypeChoices =
+            [
+                new FilePickerFileType("Motion Package")
+                {
+                    Patterns = ["*.mtp"]
+                }
+            ]
+        });
+
+        if (savedFile == null)
+        {
+            return;
+        }
+
+        var destPath = savedFile.Path.LocalPath;
+        if (DataContext is MainWindowViewModel vm)
+        {
+            await vm.SaveLevelAsAsync(destPath);
+        }
+    }
 }
