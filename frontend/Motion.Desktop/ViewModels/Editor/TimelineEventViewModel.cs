@@ -82,4 +82,13 @@ public partial class TimelineEventViewModel : ViewModelBase
         // Если событие слишком короткое, даем ему мин. ширину, чтобы его можно было увидеть
         if (WidthPixels < 2) WidthPixels = 2;
     }
+    
+    public MtpEvent ToModel()
+    {
+        // Убеждаемся, что DTO синхронизировано с UI свойствами
+        Model.Time = Time;
+        Model.Duration = Duration;
+        // Model.Asset и Model.Id и так обновляются, если мы их не меняли
+        return Model; 
+    }
 }

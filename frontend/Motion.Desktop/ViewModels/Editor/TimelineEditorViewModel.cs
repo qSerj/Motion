@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Motion.Desktop.Models.Mtp;
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
@@ -156,6 +157,21 @@ namespace Motion.Desktop.ViewModels.Editor
                 }
             }
 
+        }
+        
+        public MtpTimeline ToModel()
+        {
+            var timeline = new MtpTimeline
+            {
+                Tracks = new List<MtpTrack>()
+            };
+
+            foreach (var track in Tracks)
+            {
+                timeline.Tracks.Add(track.ToModel());
+            }
+
+            return timeline;
         }
     }
 }

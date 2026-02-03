@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Motion.Desktop.Models.Mtp;
@@ -26,6 +27,22 @@ namespace Motion.Desktop.ViewModels.Editor
             {
                 evt.RecalculateLayout(pixelsPerSecond);
             }
+        }
+        
+        public MtpTrack ToModel()
+        {
+            var track = new MtpTrack
+            {
+                Id = Name,
+                Events = new List<MtpEvent>()
+            };
+
+            foreach (var evt in Events)
+            {
+                track.Events.Add(evt.ToModel());
+            }
+
+            return track;
         }
     }
 }

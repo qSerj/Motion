@@ -369,7 +369,7 @@ namespace Motion.Desktop.ViewModels
 
             try
             {
-                var timeline = Editor.ExportTimeline();
+                var timeline = Editor.ToModel();
                 await _mtpService.WriteTimelineAsync(_currentTimelinePath, timeline);
                 await _mtpService.SaveLevelArchiveAsync(_currentLevelRoot, _currentMtpPath);
                 StatusText = "Timeline saved";
